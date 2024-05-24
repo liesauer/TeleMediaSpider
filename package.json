@@ -1,5 +1,5 @@
 {
-  "name": "grab-them-all",
+  "name": "telegram-media-spider",
   "version": "1.0.0",
   "private": true,
   "bin": "./obfuscated/index.js",
