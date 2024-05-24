@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2015",
+    "module": "commonjs",
+    "sourceMap": false,
+    "outDir": "dist",
+    "rootDirs": ["src"],
+    "strict": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictPropertyInitialization": false,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "lib": ["esnext"],
+    "skipLibCheck": true
+  },
+  "include": ["./src/**/*"],
+  "exclude": []
+}

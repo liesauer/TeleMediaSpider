@@ -1,0 +1,10 @@
+.DS_Store
+
+# https://github.com/vercel/pkg-fetch/releases
+# {PKG_CACHE_PATH}/{PKG_FETCH_VERSION}/fetched-{NODE_VERSION}-{OS}-{ARCH}
+.pkg-cache/
+dist/
+obfuscated/
+output/
+node_modules/
+data/

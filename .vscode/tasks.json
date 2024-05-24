@@ -1,0 +1,167 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558 
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "clean",
+            "command": "npx",
+            "args": [
+                "rimraf",
+                "${workspaceFolder}/dist",
+                "${workspaceFolder}/obfuscated"
+            ],
+            "hide": true,
+            "problemMatcher": []
+        },
+        {
+            "type": "typescript",
+            "tsconfig": "tsconfig.json",
+            "label": "build",
+            "problemMatcher": [
+                "$tsc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "dependsOn":[
+                "clean"
+            ],
+            "dependsOrder": "sequence"
+        },
+        {
+            "type": "shell",
+            "label": "obfuscate index.js",
+            "command": "npx",
+            "args": [
+                "javascript-obfuscator",
+
+                "--ignore-imports",
+                "true",
+
+                "--compact",
+                "true",
+                "--control-flow-flattening",
+                "true",
+                "--control-flow-flattening-threshold",
+                "0.75",
+                "--dead-code-injection",
+                "true",
+                "--dead-code-injection-threshold",
+                "0.4",
+                "--debug-protection",
+                "false",
+                "--debug-protection-interval",
+                "0",
+                "--disable-console-output",
+                "false",
+                "--identifier-names-generator",
+                "hexadecimal",
+                "--log",
+                "true",
+                "--numbers-to-expressions",
+                "true",
+                "--rename-globals",
+                "false",
+                "--self-defending",
+                "true",
+                "--simplify",
+                "true",
+                "--split-strings",
+                "true",
+                "--split-strings-chunk-length",
+                "10",
+                "--string-array",
+                "true",
+                "--string-array-calls-transform",
+                "true",
+                "--string-array-calls-transform-threshold",
+                "0.75",
+                "--string-array-encoding",
+                "base64",
+                "--string-array-index-shift",
+                "true",
+                "--string-array-rotate",
+                "true",
+                "--string-array-shuffle",
+                "true",
+                "--string-array-wrappers-count",
+                "2",
+                "--string-array-wrappers-chained-calls",
+                "true",
+                "--string-array-wrappers-parameters-max-count",
+                "4",
+                "--string-array-wrappers-type",
+                "function",
+                "--string-array-threshold",
+                "0.75",
+                "--transform-object-keys",
+                "true",
+                "--unicode-escape-sequence",
+                "false",
+
+                "dist/index.js",
+
+                "--output",
+                "${workspaceFolder}/obfuscated",
+            ],
+            "hide": true,
+            "problemMatcher": []
+        },
+        {
+            "type": "shell",
+            "label": "pre-obfuscate",
+            "command": "npx",
+            "args": [
+                "copyfiles",
+                "-u",
+                "1",
+                "dist/**/*",
+                "obfuscated"
+            ],
+            "hide": true,
+            "problemMatcher": []
+        },
+        {
+            "type": "shell",
+            "label": "obfuscate",
+            "dependsOn":[
+                "pre-obfuscate",
+                "obfuscate index.js"
+            ],
+            "dependsOrder": "sequence",
+            "hide": true,
+            "problemMatcher": []
+        },
+        {
+            "type": "shell",
+            "label": "pack executable",
+            "command": "npx",
+            "options": {
+                "env": {
+                    "PKG_CACHE_PATH": "${workspaceFolder}/.pkg-cache",
+                }
+            },
+            "args": [
+                "pkg",
+                "--no-bytecode",
+                "--public-packages",
+                "*",
+                "--public",
+                "--compress",
+                "GZip",
+                "${workspaceFolder}/package.json",
+                "-o",
+                "${workspaceFolder}/output/TeleMediaSpider"
+            ],
+            "dependsOn":[
+                "build",
+                "obfuscate"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": []
+        }
+    ]
+}
