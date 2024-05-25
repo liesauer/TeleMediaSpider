@@ -50,8 +50,8 @@ async function getChannelInfos(client: TelegramClient) {
 
     const infos = chats.map(chat => {
         return {
-            id:       chat.id,
-            peer:     idsMap[chat.id.toString()],
+            id:       chat.id || "",
+            peer:     idsMap[chat.id.toString()] || "",
             title:    chat.title,
             forum:    chat.forum,
             username: chat.username,
@@ -71,6 +71,15 @@ async function getChannelInfos(client: TelegramClient) {
 
             result.value.channel.topics = getTopics(result.value.topics);
         }
+    });
+
+    infos.unshift({
+        id:       "me",
+        peer:     "me",
+        title:    "Saved Messages",
+        forum:    false,
+        username: "",
+        topics:   [],
     });
 
     return infos;
