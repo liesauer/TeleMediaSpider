@@ -425,6 +425,8 @@ async function main() {
         protect: true,
         catch: workerErrorHandler,
     }, async () => await mediaSpider());
+
+    await waitForever();
 }
 
 mainTimer = Cron("*/5 * * * *", {
