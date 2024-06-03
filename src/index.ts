@@ -229,9 +229,9 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             },
         });
 
-        const ext = mimetics.parse(buffer)?.ext  || 'jpg';
+        const ext = !noExt ? '.' + (mimetics.parse(buffer)?.ext  || 'jpg') : '';
 
-        await writeFile(`${dir}/${filename}${!noExt ? '.' + ext : ''}`, buffer);
+        await writeFile(`${dir}/${filename}${ext}`, buffer);
     }
 
     if (video && (!medias || medias.includes('video'))) {
@@ -261,11 +261,11 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             },
         });
 
-        const ext = Object.keys(mimetics.mimeTypeMap).find(v => {
+        const ext = !noExt ? '.' + (Object.keys(mimetics.mimeTypeMap).find(v => {
             return mimetics.mimeTypeMap[v] == video.mimeType;
-        }) || 'mp4';
+        }) || 'mp4') : '';
 
-        await writeFile(`${dir}/${filename}${!noExt ? '.' + ext : ''}`, buffer);
+        await writeFile(`${dir}/${filename}${ext}`, buffer);
     }
 
     if (audio && (!medias || medias.includes('audio'))) {
@@ -295,11 +295,11 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             },
         });
 
-        const ext = Object.keys(mimetics.mimeTypeMap).find(v => {
+        const ext = !noExt ? '.' + (Object.keys(mimetics.mimeTypeMap).find(v => {
             return mimetics.mimeTypeMap[v] == audio.mimeType;
-        }) || 'mp3';
+        }) || 'mp3') : '';
 
-        await writeFile(`${dir}/${filename}${!noExt ? '.' + ext : ''}`, buffer);
+        await writeFile(`${dir}/${filename}${ext}`, buffer);
     }
 }
 

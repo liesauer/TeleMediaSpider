@@ -8,3 +8,5 @@ obfuscated/
 output/
 node_modules/
 data/
+/TeleMediaSpider
+/TeleMediaSpider.exe
