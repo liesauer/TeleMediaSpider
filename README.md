@@ -49,7 +49,7 @@ channels = [ "频道id1", "频道id2" ]
 <br />
 使用固定的频道id：`me` 即可，其他不变。
 
-默认抓取频道的`图片` `视频` `音频`，如果你想特定的频道只抓取特定的数据，也可自由配置，有效值：`photo` `video` `audio`。
+默认抓取频道的`图片` `视频` `音频` `文件`，如果你想特定的频道只抓取特定的数据，也可自由配置，有效值：`photo` `video` `audio` `file`。
 
 将以下配置
 ```toml
@@ -61,7 +61,7 @@ medias = { }
 [spider]
   [spider.medias]
   频道id1 = "photo"
-  频道id2 = "photo,video,audio"
+  频道id2 = "photo,video,audio,file"
 ```
 
 ## 3. 正式抓取

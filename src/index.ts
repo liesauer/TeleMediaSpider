@@ -195,6 +195,7 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
     const photo = message.photo as Api.Photo;
     const video = message.video as Api.Document;
     const audio = message.audio as Api.Document;
+    const file  = message.document && message.document.attributes.length == 1 && message.document.attributes[0].className == "DocumentAttributeFilename" ? message.file : null;
 
     const topicId = message.replyTo?.replyToTopId || message.replyToMsgId;
 
@@ -301,6 +302,40 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
 
         await writeFile(`${dir}/${filename}${ext}`, buffer);
     }
+
+    if (file && (!medias || medias.includes('file'))) {
+        let media = message.media as Api.MessageMediaDocument;
+
+        const dir = DataDir() + '/' + channelId.toString();
+
+        mkdirSync(dir, { recursive: true });
+
+        let filename = `${channelId.toString()}${topicId ? '_' + topicId : ''}_${message.id}`;
+        let noExt = false;
+
+        if (media?.document) {
+            const document = media.document as Api.Document;
+
+            const filenameAttr = document.attributes.find(v => v.className == "DocumentAttributeFilename") as Api.DocumentAttributeFilename;
+
+            if (filenameAttr && filenameAttr.fileName) {
+                filename += `_${filenameAttr.fileName}`;
+                noExt = true;
+            }
+        }
+
+        const buffer = await client.downloadMedia(message.media, {
+            progressCallback: (bytes, total) => {
+                console.log(`媒体下载：${filename}，进度：${bytes}/${total}`);
+            },
+        });
+
+        const ext = !noExt ? '.' + (Object.keys(mimetics.mimeTypeMap).find(v => {
+            return mimetics.mimeTypeMap[v] == file.mimeType;
+        }) || 'dat') : '';
+
+        await writeFile(`${dir}/${filename}${ext}`, buffer);
+    }
 }
 
 async function mediaSpider() {
@@ -326,7 +361,7 @@ async function mediaSpider() {
             const medias = tonfig.get(['spider', 'medias', channelId], '');
 
             if (!medias) {
-                tonfig.set(['spider', 'medias', channelId], 'photo,video,audio');
+                tonfig.set(['spider', 'medias', channelId], 'photo,video,audio,file');
                 await tonfig.save();
             }
 
