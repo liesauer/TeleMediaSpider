@@ -14,6 +14,9 @@ yarn
 
 # 如何使用
 
+## 0. 下载
+已打包好的TeleSpider可在这里下载：[https://github.com/liesauer/TeleMediaSpider/releases](https://github.com/liesauer/TeleMediaSpider/releases)，包含 `Windows x64` `Linux x64` 多个版本，如需其他版本，请自行打包。
+
 ## 1. 首次运行
 第一次运行时，会自动生成 `data/config.toml` 配置文件，需要配置以下内容：
 <br />
