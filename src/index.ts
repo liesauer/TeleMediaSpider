@@ -211,7 +211,14 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
         mkdirSync(dir, { recursive: true });
 
         let filename = `${channelId.toString()}${topicId ? '_' + topicId : ''}_${message.id}`;
+        let ext = '';
         let noExt = false;
+
+        if (message?.file) {
+            ext = Object.keys(mimetics.mimeTypeMap).find(v => {
+                return mimetics.mimeTypeMap[v] == message.file.mimeType;
+            }) || '';
+        }
 
         if (media?.document) {
             const document = media.document as Api.Document;
@@ -224,15 +231,15 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             }
         }
 
+        const fullFileName = noExt ? filename : `${filename}.${ext || 'jpg'}`;
+
         const buffer = await client.downloadMedia(message.media, {
             progressCallback: (bytes, total) => {
-                console.log(`媒体下载：${filename}，进度：${bytes}/${total}`);
+                console.log(`媒体下载：${fullFileName}，进度：${bytes}/${total}`);
             },
         });
 
-        const ext = !noExt ? '.' + (mimetics.parse(buffer)?.ext  || 'jpg') : '';
-
-        await writeFile(`${dir}/${filename}${ext}`, buffer);
+        await writeFile(`${dir}/${fullFileName}`, buffer);
     }
 
     if (video && (!medias || medias.includes('video'))) {
@@ -243,7 +250,14 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
         mkdirSync(dir, { recursive: true });
 
         let filename = `${channelId.toString()}${topicId ? '_' + topicId : ''}_${message.id}`;
+        let ext = '';
         let noExt = false;
+
+        if (message?.file) {
+            ext = Object.keys(mimetics.mimeTypeMap).find(v => {
+                return mimetics.mimeTypeMap[v] == message.file.mimeType;
+            }) || '';
+        }
 
         if (media?.document) {
             const document = media.document as Api.Document;
@@ -256,17 +270,15 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             }
         }
 
+        const fullFileName = noExt ? filename : `${filename}.${ext || 'mp4'}`;
+
         const buffer = await client.downloadMedia(message.media, {
             progressCallback: (bytes, total) => {
-                console.log(`媒体下载：${filename}，进度：${bytes}/${total}`);
+                console.log(`媒体下载：${fullFileName}，进度：${bytes}/${total}`);
             },
         });
 
-        const ext = !noExt ? '.' + (Object.keys(mimetics.mimeTypeMap).find(v => {
-            return mimetics.mimeTypeMap[v] == video.mimeType;
-        }) || 'mp4') : '';
-
-        await writeFile(`${dir}/${filename}${ext}`, buffer);
+        await writeFile(`${dir}/${fullFileName}`, buffer);
     }
 
     if (audio && (!medias || medias.includes('audio'))) {
@@ -277,7 +289,14 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
         mkdirSync(dir, { recursive: true });
 
         let filename = `${channelId.toString()}${topicId ? '_' + topicId : ''}_${message.id}`;
+        let ext = '';
         let noExt = false;
+
+        if (message?.file) {
+            ext = Object.keys(mimetics.mimeTypeMap).find(v => {
+                return mimetics.mimeTypeMap[v] == message.file.mimeType;
+            }) || '';
+        }
 
         if (media?.document) {
             const document = media.document as Api.Document;
@@ -290,17 +309,15 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             }
         }
 
+        const fullFileName = noExt ? filename : `${filename}.${ext || 'mp3'}`;
+
         const buffer = await client.downloadMedia(message.media, {
             progressCallback: (bytes, total) => {
-                console.log(`媒体下载：${filename}，进度：${bytes}/${total}`);
+                console.log(`媒体下载：${fullFileName}，进度：${bytes}/${total}`);
             },
         });
 
-        const ext = !noExt ? '.' + (Object.keys(mimetics.mimeTypeMap).find(v => {
-            return mimetics.mimeTypeMap[v] == audio.mimeType;
-        }) || 'mp3') : '';
-
-        await writeFile(`${dir}/${filename}${ext}`, buffer);
+        await writeFile(`${dir}/${fullFileName}`, buffer);
     }
 
     if (file && (!medias || medias.includes('file'))) {
@@ -311,7 +328,14 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
         mkdirSync(dir, { recursive: true });
 
         let filename = `${channelId.toString()}${topicId ? '_' + topicId : ''}_${message.id}`;
+        let ext = '';
         let noExt = false;
+
+        if (message?.file) {
+            ext = Object.keys(mimetics.mimeTypeMap).find(v => {
+                return mimetics.mimeTypeMap[v] == message.file.mimeType;
+            }) || '';
+        }
 
         if (media?.document) {
             const document = media.document as Api.Document;
@@ -324,17 +348,15 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             }
         }
 
+        const fullFileName = noExt ? filename : `${filename}.${ext || 'dat'}`;
+
         const buffer = await client.downloadMedia(message.media, {
             progressCallback: (bytes, total) => {
-                console.log(`媒体下载：${filename}，进度：${bytes}/${total}`);
+                console.log(`媒体下载：${fullFileName}，进度：${bytes}/${total}`);
             },
         });
 
-        const ext = !noExt ? '.' + (Object.keys(mimetics.mimeTypeMap).find(v => {
-            return mimetics.mimeTypeMap[v] == file.mimeType;
-        }) || 'dat') : '';
-
-        await writeFile(`${dir}/${filename}${ext}`, buffer);
+        await writeFile(`${dir}/${fullFileName}`, buffer);
     }
 }
 
