@@ -1,6 +1,8 @@
 # TeleMediaSpider
 Telegram 频道爬虫
 
+![屏幕截图](screenshot.jpg)
+
 # 初始化
 ```bash
 yarn
