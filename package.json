@@ -1,6 +1,6 @@
 {
   "name": "telegram-media-spider",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "bin": "./obfuscated/index.js",
   "pkg": {
@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@liesauer/tonfig": "^1.0.5",
+    "async": "^3.2.5",
     "croner": "^8.0.2",
     "input": "^1.0.1",
     "mimetics": "^0.0.8",

@@ -1,4 +1,5 @@
 import { Tonfig } from '@liesauer/tonfig';
+import queue from 'async/queue';
 import Cron from 'croner';
 import { mkdirSync } from 'fs';
 import { writeFile } from 'fs/promises';
@@ -7,7 +8,8 @@ import mimetics from 'mimetics';
 import minimist from 'minimist';
 import { Api, TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
-import { DataDir, array2dictionary, waitForever } from './functions';
+import { array2dictionary, DataDir, waitForever, waitTill } from './functions';
+import { AnnotatedDictionary, ArrayValueType, UnwrapAnnotatedDictionary } from './types';
 
 const argv = minimist(process.argv.slice(2));
 
@@ -16,6 +18,17 @@ let tonfig: Tonfig;
 
 let mainTimer: Cron;
 let mediaSpiderTimer: Cron;
+
+let channelInfos: Awaited<ReturnType<typeof getChannelInfos>>;
+
+const waitQueue: AnnotatedDictionary<{
+    channelId: string,
+    downloading: boolean,
+    messages: Api.MessageService[],
+    medias: string[],
+}, "channelId"> = {};
+
+let execQueue;
 
 function workerErrorHandler(error: any, job: Cron) {
     console.error(`「${job.name}」任务过程中发生错误：\n${error}`);
@@ -365,52 +378,56 @@ async function mediaSpider() {
 
     const allowChannels = tonfig.get<string[]>('spider.channels', []);
 
-    const listChannels = !!argv['list'];
+    for (const channel of channelInfos) {
+        const channelId = channel.id.toString();
 
-    await getChannelInfos(client).then(async channels => {
-        for (const channel of channels) {
-            const channelId = channel.id.toString();
+        if (!allowChannels.includes(channelId)) continue;
 
-            if (listChannels) {
-                console.log(`频道ID：${channel.id.toString()}`);
-                console.log(`频道名：${channel.title}`);
-                console.log('');
-                continue;
-            }
+        let medias = tonfig.get(['spider', 'medias', channelId], '');
 
-            if (!allowChannels.includes(channelId)) continue;
-
-            const medias = tonfig.get(['spider', 'medias', channelId], '');
-
-            if (!medias) {
-                tonfig.set(['spider', 'medias', channelId], 'photo,video,audio,file');
-                await tonfig.save();
-            }
-
-            const mediasArr = medias.split(',').map(v => v.trim());
-
-            console.log(`抓取频道消息，频道ID：${channelId}`);
-
-            const messages = await getChannelMessages(client, channelId, tonfig.get(['spider', 'lastIds', channelId], 0), undefined, -1);
-
-            for (const message of messages.messages) {
-                // console.log(message.id);
-                // console.log(message.message);
-                // console.log("\n\n");
-
-                console.log(`解析频道消息，消息ID：${message.id}`);
-
-                await downloadChannelMedia(client, channelId, message, mediasArr);
-
-                tonfig.set(['spider', 'lastIds', channelId], message.id);
-                await tonfig.save();
-
-                console.log("\n");
-            }
+        if (!medias) {
+            medias = 'photo,video,audio,file';
+            tonfig.set(['spider', 'medias', channelId], medias);
+            await tonfig.save();
         }
-    }).then(() => {
-        if (listChannels) return waitForever();
-    });
+
+        const mediasArr = medias.split(',').map(v => v.trim());
+
+        if (!waitQueue[channelId]) {
+            waitQueue[channelId] = {
+                channelId: channelId,
+                downloading: false,
+                messages: [],
+                medias: mediasArr,
+            };
+        }
+
+        /**
+         * 如果这个频道的数据还没有抓取完
+         * 就不再抓取新的信息
+         * 
+         * 因为要保存频道的最后抓取位置
+         * 单个频道只能一条一条消息按顺序解析下载
+         * 
+         * 只做多频道单消息同时下载
+         * 不做单频道多消息同时下载
+         */
+        if (waitQueue[channelId].messages.length) continue;
+
+        console.log(`抓取频道消息，频道ID：${channelId}`);
+
+        const messages = await getChannelMessages(client, channelId, tonfig.get(['spider', 'lastIds', channelId], 0), undefined, -1);
+
+        for (const message of messages.messages) {
+            // console.log(message.id);
+            // console.log(message.message);
+            // console.log("\n\n");
+
+            waitQueue[channelId].messages.push(message);
+
+            execQueue.push();
+        }
+    }
 }
 
 async function main() {
@@ -423,6 +440,7 @@ async function main() {
         },
 
         spider: {
+            concurrency: 5,
             channels: [],
             lastIds: {},
             medias: {},
@@ -481,12 +499,62 @@ async function main() {
         await tonfig.save();
     }
 
+    channelInfos = await getChannelInfos(client);
+
+    const listChannels = !!argv['list'];
+
+    if (listChannels) {
+        for (const channel of channelInfos) {
+            console.log(`频道ID：${channel.id.toString()}`);
+            console.log(`频道名：${channel.title}`);
+            console.log('');
+        }
+
+        await waitForever();
+    }
+
+    const concurrency = tonfig.get<number>("spider.concurrency", 5);
+
+    execQueue = execQueue || queue(async function(task, callback) {
+        let channelInfo: UnwrapAnnotatedDictionary<typeof waitQueue>;
+
+        await waitTill(() => {
+            channelInfo = Object.values(waitQueue).find(v => !v.downloading && v.messages.length);
+
+            return !!channelInfo;
+        }, 100);
+
+        channelInfo.downloading = true;
+
+        const channelId = channelInfo.channelId;
+        const message = channelInfo.messages[0];
+        const mediasArr = channelInfo.medias;
+
+        console.log(`解析频道消息，频道ID：${channelId}，消息ID：${message.id}`);
+
+        await downloadChannelMedia(client, channelId, message, mediasArr).then(async () => {
+            channelInfo.messages.shift();
+
+            // 下载成功，保存当前频道位置
+            tonfig.set(['spider', 'lastIds', channelId], message.id);
+            await tonfig.save();
+
+            console.log("\n");
+        }, () => {
+            // 下载失败，啥也不用管，后面根据队列自动重试
+        }).finally(() => {
+            channelInfo.downloading = false;
+
+            callback();
+        });
+    }, concurrency);
+
     if (mediaSpiderTimer) {
         mediaSpiderTimer.stop();
         mediaSpiderTimer = null;
     }
 
-    mediaSpiderTimer = Cron("*/5 * * * * *", {
+    mediaSpiderTimer = Cron("*/10 * * * * *", {
         name: 'mediaSpider',
         protect: true,
         catch: workerErrorHandler,

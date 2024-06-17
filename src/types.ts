@@ -15,6 +15,7 @@ export interface NumericDictionary<T> {
 
 export type AnnotatedDoubleDictionary<T, KeyAnnotate1 extends string, KeyAnnotate2 extends string> = AnnotatedDictionary<AnnotatedDictionary<T, KeyAnnotate2>, KeyAnnotate1>
 
+export type UnwrapAnnotatedDictionary<T> = T extends AnnotatedDictionary<infer V, infer Q> ? V : any;
 export type UnwrapNumericDictionaryType<T> = T extends NumericDictionary<infer U> ? U : never
 
 export type ArrayValueType<T> = T extends Array<infer V> ? V : any;
