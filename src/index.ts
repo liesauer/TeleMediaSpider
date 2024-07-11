@@ -23,6 +23,7 @@ let channelInfos: Awaited<ReturnType<typeof getChannelInfos>>;
 
 const waitQueue: AnnotatedDictionary<{
     channelId: string,
+    channelTitle: string,
     downloading: boolean,
     messages: Api.MessageService[],
     medias: string[],
@@ -380,6 +381,7 @@ async function mediaSpider() {
 
     for (const channel of channelInfos) {
         const channelId = channel.id.toString();
+        const channelTitle = channel.title || '';
 
         if (!allowChannels.includes(channelId)) continue;
 
@@ -396,6 +398,7 @@ async function mediaSpider() {
         if (!waitQueue[channelId]) {
             waitQueue[channelId] = {
                 channelId: channelId,
+                channelTitle: channelTitle,
                 downloading: false,
                 messages: [],
                 medias: mediasArr,
@@ -415,6 +418,10 @@ async function mediaSpider() {
         if (waitQueue[channelId].messages.length) continue;
 
         console.log(`抓取频道消息，频道ID：${channelId}`);
+
+        // 保存频道名
+        tonfig.set(['spider', 'titles', channelId], channelTitle);
+        await tonfig.save();
 
         const messages = await getChannelMessages(client, channelId, tonfig.get(['spider', 'lastIds', channelId], 0), undefined, -1);
 
@@ -442,6 +449,7 @@ async function main() {
         spider: {
             concurrency: 5,
             channels: [],
+            titles: {},
             lastIds: {},
             medias: {},
         },
