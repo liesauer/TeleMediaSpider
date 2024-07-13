@@ -385,6 +385,17 @@ async function mediaSpider() {
 
         if (!allowChannels.includes(channelId)) continue;
 
+        /**
+         * 因为频道信息都是启动时只获取一次
+         * 那就没必要每回都写一遍
+         * 在第一次时，写入频道名，避免不必要的频繁IO操作
+         */
+        if (!waitQueue[channelId]) {
+            // 保存频道名
+            tonfig.set(['spider', 'titles', channelId], channelTitle);
+            await tonfig.save();
+        }
+
         let medias = tonfig.get(['spider', 'medias', channelId], '');
 
         if (!medias) {
@@ -418,10 +429,6 @@ async function mediaSpider() {
         if (waitQueue[channelId].messages.length) continue;
 
         console.log(`抓取频道消息，频道ID：${channelId}`);
-
-        // 保存频道名
-        tonfig.set(['spider', 'titles', channelId], channelTitle);
-        await tonfig.save();
 
         const messages = await getChannelMessages(client, channelId, tonfig.get(['spider', 'lastIds', channelId], 0), undefined, -1);
 
