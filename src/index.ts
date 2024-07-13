@@ -6,33 +6,60 @@ import { writeFile } from 'fs/promises';
 import input from 'input';
 import mimetics from 'mimetics';
 import minimist from 'minimist';
-import { Api, TelegramClient } from 'telegram';
+import { Api, Logger, TelegramClient } from 'telegram';
+import { LogLevel } from 'telegram/extensions/Logger';
 import { StringSession } from 'telegram/sessions';
-import { array2dictionary, DataDir, waitForever, waitTill } from './functions';
+import { array2dictionary, consoletable, DataDir, waitForever, waitTill } from './functions';
 import { AnnotatedDictionary, ArrayValueType, UnwrapAnnotatedDictionary } from './types';
 
 const argv = minimist(process.argv.slice(2));
 
-let client: TelegramClient;
-let tonfig: Tonfig;
+class MyLogger extends Logger {
+    public format(message: string, level: string, messageFormat?: string) {
+        return (messageFormat || this.messageFormat)
+            .replace("%t", this.getDateTime())
+            .replace("%l", level.toUpperCase())
+            .replace("%m", message);
+    }
+    public log(level: LogLevel, message: string, color: string) {
+        let multiLine = message.includes("\n");
+        let messageFormat = "";
 
-let mainTimer: Cron;
-let mediaSpiderTimer: Cron;
+        if (multiLine) {
+            messageFormat = "[%t] [%l]\n%m";
+        } else {
+            messageFormat = "[%t] [%l] - %m";
+        }
 
-let channelInfos: Awaited<ReturnType<typeof getChannelInfos>>;
+        const log = color + this.format(message, level, messageFormat) + this['colors'].end;
 
-const waitQueue: AnnotatedDictionary<{
-    channelId: string,
-    channelTitle: string,
-    downloading: boolean,
-    messages: Api.MessageService[],
-    medias: string[],
-}, "channelId"> = {};
+        if (!uiTimer || uiTimer['_states'].paused) {
+            console.log(log);
+        }
 
-let execQueue;
+        addLogHistory(log);
+    }
+}
+
+function addLogHistory(message: string) {
+    const messageLines = message.split("\n");
+
+    if (messageLines.length == maxLogHistory) {
+        logHistory = messageLines;
+    } else if (messageLines.length > maxLogHistory) {
+        logHistory = messageLines.slice(messageLines.length  - maxLogHistory);
+    } else {
+        for (const message of messageLines) {
+            if (logHistory.length >= maxLogHistory) {
+                logHistory.shift();
+            }
+            logHistory.push(message);
+        }
+    }
+}
 
 function workerErrorHandler(error: any, job: Cron) {
-    console.error(`「${job.name}」任务过程中发生错误：\n${error}`);
+    logger.error(`「${job.name}」任务过程中发生错误：\n${error}`);
 };
 
 async function getChannelInfos(client: TelegramClient) {
@@ -205,17 +232,13 @@ async function getChannelMessages(client: TelegramClient, channelId: string, las
     return { lastId: lastId || 0, messages };
 }
 
-async function downloadChannelMedia(client: TelegramClient, channelId: string, message: Api.MessageService, medias?: string[]) {
+async function downloadChannelMedia(client: TelegramClient, channelId: string, message: Api.MessageService, channelInfo: UnwrapAnnotatedDictionary<typeof waitQueue>, medias?: string[]) {
     const photo = message.photo as Api.Photo;
     const video = message.video as Api.Document;
     const audio = message.audio as Api.Document;
     const file  = message.document && message.document.attributes.length == 1 && message.document.attributes[0].className == "DocumentAttributeFilename" ? message.file : null;
 
     const topicId = message.replyTo?.replyToTopId || message.replyToMsgId;
-
-    // console.log(message.id);
-    // console.log(topicId);
-    // console.log(message.message);
 
     if (photo && (!medias || medias.includes('photo'))) {
         let media = message.media as Api.MessageMediaDocument;
@@ -247,9 +270,12 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
 
         const fullFileName = noExt ? filename : `${filename}.${ext || 'jpg'}`;
 
+        channelInfo.fileName = fullFileName;
+
         const buffer = await client.downloadMedia(message.media, {
             progressCallback: (bytes, total) => {
-                console.log(`媒体下载：${fullFileName}，进度：${bytes}/${total}`);
+                channelInfo.downloadedBytes = bytes;
+                channelInfo.totalBytes = total;
             },
         });
 
@@ -286,9 +312,12 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
 
         const fullFileName = noExt ? filename : `${filename}.${ext || 'mp4'}`;
 
+        channelInfo.fileName = fullFileName;
+
         const buffer = await client.downloadMedia(message.media, {
             progressCallback: (bytes, total) => {
-                console.log(`媒体下载：${fullFileName}，进度：${bytes}/${total}`);
+                channelInfo.downloadedBytes = bytes;
+                channelInfo.totalBytes = total;
             },
         });
 
@@ -325,9 +354,12 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
 
         const fullFileName = noExt ? filename : `${filename}.${ext || 'mp3'}`;
 
+        channelInfo.fileName = fullFileName;
+
         const buffer = await client.downloadMedia(message.media, {
             progressCallback: (bytes, total) => {
-                console.log(`媒体下载：${fullFileName}，进度：${bytes}/${total}`);
+                channelInfo.downloadedBytes = bytes;
+                channelInfo.totalBytes = total;
             },
         });
 
@@ -364,15 +396,45 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
 
         const fullFileName = noExt ? filename : `${filename}.${ext || 'dat'}`;
 
+        channelInfo.fileName = fullFileName;
+
         const buffer = await client.downloadMedia(message.media, {
             progressCallback: (bytes, total) => {
-                console.log(`媒体下载：${fullFileName}，进度：${bytes}/${total}`);
+                channelInfo.downloadedBytes = bytes;
+                channelInfo.totalBytes = total;
             },
         });
 
         await writeFile(`${dir}/${fullFileName}`, buffer);
     }
 }
+
+let channelTable: any[] = [];
+let maxLogHistory = 10;
+let logHistory: string[] = [];
+
+let logger: Logger = new MyLogger();
+let client: TelegramClient;
+let tonfig: Tonfig;
+
+let uiTimer: Cron;
+let mainTimer: Cron;
+let mediaSpiderTimer: Cron;
+
+let channelInfos: Awaited<ReturnType<typeof getChannelInfos>>;
+
+const waitQueue: AnnotatedDictionary<{
+    channelId: string,
+    channelTitle: string,
+    downloading: boolean,
+    fileName: string,
+    downloadedBytes: bigInt.BigInteger,
+    totalBytes: bigInt.BigInteger,
+    messages: Api.MessageService[],
+    medias: string[],
+}, "channelId"> = {};
+
+let execQueue;
 
 async function mediaSpider() {
     await client.connect();
@@ -411,6 +473,9 @@ async function mediaSpider() {
                 channelId: channelId,
                 channelTitle: channelTitle,
                 downloading: false,
+                fileName: '',
+                downloadedBytes: null,
+                totalBytes: null,
                 messages: [],
                 medias: mediasArr,
             };
@@ -428,15 +493,9 @@ async function mediaSpider() {
          */
         if (waitQueue[channelId].messages.length) continue;
 
-        console.log(`抓取频道消息，频道ID：${channelId}`);
-
         const messages = await getChannelMessages(client, channelId, tonfig.get(['spider', 'lastIds', channelId], 0), undefined, -1);
 
         for (const message of messages.messages) {
-            // console.log(message.id);
-            // console.log(message.message);
-            // console.log("\n\n");
-
             waitQueue[channelId].messages.push(message);
 
             execQueue.push();
@@ -444,7 +503,49 @@ async function mediaSpider() {
     }
 }
 
+async function render() {
+    console.clear();
+
+    if (channelTable && channelTable.length) {
+        console.log(consoletable(channelTable));
+
+        uiTimer.stop();
+        return;
+    }
+
+    const downloading = Object.values(waitQueue).filter(v => v.downloading == true && v.totalBytes && !v.totalBytes.isZero());
+
+    if (downloading.length) {
+        const maxFileNameLength = 25;
+        const tableData = downloading.map(v => {
+            let fileName = v.fileName;
+
+            if (fileName.length > maxFileNameLength) {
+                fileName = '...' + fileName.substring(fileName.length - maxFileNameLength);
+            }
+
+            const downloaded = v.downloadedBytes.toJSNumber();
+            const total = v.totalBytes.toJSNumber();
+            const percent = (downloaded / total * 100).toFixed(2);
+
+            return {
+                "频道ID": v.channelId,
+                "文件名": fileName,
+                "进度": `${percent}%`,
+            };
+        });
+
+        console.log(consoletable(tableData));
+    }
+
+    for (const log of logHistory) {
+        console.log(log);
+    }
+}
+
 async function main() {
+    logger = new MyLogger();
+
     tonfig = await Tonfig.loadFile(DataDir() + '/config.toml', {
         account: {
             apiId: 0,
@@ -480,7 +581,7 @@ async function main() {
     const account = tonfig.get<string>("account.account");
 
     if (!apiId || !apiHash || !account) {
-        console.warn('请编辑 data/config.toml 进行账号配置，并重启软件');
+        logger.warn('请编辑 data/config.toml 进行账号配置，并重启软件');
         await waitForever();
     }
 
@@ -496,6 +597,7 @@ async function main() {
     };
 
     client = new TelegramClient(new StringSession(tonfig.get<string>("account.session", "")), apiId, apiHash, {
+        baseLogger: logger,
         connectionRetries: 5,
         useWSS: false,
         proxy: proxy.ip && proxy.port ? proxy : undefined,
@@ -505,7 +607,7 @@ async function main() {
         phoneNumber: account,
         password: async () => await input.text("请输入密码："),
         phoneCode: async () => await input.text("请输入验证码："),
-        onError: (err) => console.log(err),
+        onError: (err) => logger.error(err.message),
     });
 
     if (!tonfig.get<string>("account.session")) {
@@ -514,15 +616,22 @@ async function main() {
         await tonfig.save();
     }
 
+    if (uiTimer) {
+        uiTimer.resume();
+    }
+
     channelInfos = await getChannelInfos(client);
 
     const listChannels = !!argv['list'];
 
     if (listChannels) {
+        channelTable = [];
+
         for (const channel of channelInfos) {
-            console.log(`频道ID：${channel.id.toString()}`);
-            console.log(`频道名：${channel.title}`);
-            console.log('');
+            channelTable.push({
+                "ID": channel.id.toString(),
+                "频道名": channel.title,
+            });
         }
 
         await waitForever();
@@ -545,16 +654,12 @@ async function main() {
         const message = channelInfo.messages[0];
         const mediasArr = channelInfo.medias;
 
-        console.log(`解析频道消息，频道ID：${channelId}，消息ID：${message.id}`);
-
-        await downloadChannelMedia(client, channelId, message, mediasArr).then(async () => {
+        await downloadChannelMedia(client, channelId, message, channelInfo, mediasArr).then(async () => {
             channelInfo.messages.shift();
 
             // 下载成功，保存当前频道位置
             tonfig.set(['spider', 'lastIds', channelId], message.id);
             await tonfig.save();
-
-            console.log("\n");
         }, () => {
             // 下载失败，啥也不用管，后面根据队列自动重试
         }).finally(() => {
@@ -577,6 +682,13 @@ async function main() {
 
     await waitForever();
 }
+
+uiTimer = Cron("*/2 * * * * *", {
+    name: 'ui',
+    protect: true,
+    paused: true,
+    catch: workerErrorHandler,
+}, async () => await render());
 
 mainTimer = Cron("*/5 * * * *", {
     name: 'main',
