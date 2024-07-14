@@ -37,11 +37,16 @@ class MyLogger extends Logger {
             console.log(log);
         }
 
-        addLogHistory(log);
+        addLogHistory(log, message);
     }
 }
 
-function addLogHistory(message: string) {
+function addLogHistory(message: string, raw: string) {
+    if (logHistory.length && logHistory[logHistory.length - 1].includes(raw)) {
+        logHistory[logHistory.length - 1] = message;
+        return;
+    }
+
     const messageLines = message.split("\n");
 
     if (messageLines.length == maxLogHistory) {
@@ -515,7 +520,20 @@ async function render() {
 
     const downloading = Object.values(waitQueue).filter(v => v.downloading == true && v.totalBytes && !v.totalBytes.isZero());
 
-    if (downloading.length) {
+    {
+        if (!downloading.length) {
+            downloading.push({
+                channelId: '',
+                channelTitle: '',
+                downloading: true,
+                fileName: '',
+                downloadedBytes: null,
+                totalBytes: null,
+                messages: null,
+                medias: null,
+            });
+        }
+
         const maxFileNameLength = 25;
         const tableData = downloading.map(v => {
             let fileName = v.fileName;
@@ -524,14 +542,18 @@ async function render() {
                 fileName = '...' + fileName.substring(fileName.length - maxFileNameLength);
             }
 
-            const downloaded = v.downloadedBytes.toJSNumber();
-            const total = v.totalBytes.toJSNumber();
-            const percent = (downloaded / total * 100).toFixed(2);
+            let percent = '';
+
+            if (v.totalBytes && !v.totalBytes.isZero()) {
+                const downloaded = v.downloadedBytes.toJSNumber();
+                const total = v.totalBytes.toJSNumber();
+                percent = (downloaded / total * 100).toFixed(2) + '%';
+            }
 
             return {
                 "频道ID": v.channelId,
                 "文件名": fileName,
-                "进度": `${percent}%`,
+                "进度": percent,
             };
         });
 
