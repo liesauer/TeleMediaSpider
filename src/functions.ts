@@ -153,3 +153,17 @@ export function consoletable(input: any) {
 
     return result;
 }
+
+export function ellipsisLeft(text: string, maxLength: number) {
+    if (!text || text.length <= maxLength) return text;
+
+    return '...' + text.substring(text.length - maxLength - 3);
+}
+
+export function ellipsisMiddle(text: string, maxLength: number) {
+    if (!text || text.length <= maxLength) return text;
+
+    const halfLength = Math.floor((maxLength - 3) / 2);
+
+    return text.substring(0, halfLength) + '...' + text.substring(text.length - halfLength);
+}

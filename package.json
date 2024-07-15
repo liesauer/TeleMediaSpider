@@ -23,7 +23,8 @@
     "input": "^1.0.1",
     "mimetics": "^0.0.8",
     "minimist": "^1.2.8",
-    "telegram": "^2.20.15"
+    "telegram": "^2.20.15",
+    "xbytes": "^1.9.1"
   },
   "devDependencies": {
     "@types/node": "^18.11.18",

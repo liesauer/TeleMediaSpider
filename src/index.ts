@@ -1,4 +1,3 @@
-import { Tonfig } from '@liesauer/tonfig';
 import queue from 'async/queue';
 import Cron from 'croner';
 import { mkdirSync } from 'fs';
@@ -9,8 +8,14 @@ import minimist from 'minimist';
 import { Api, Logger, TelegramClient } from 'telegram';
 import { LogLevel } from 'telegram/extensions/Logger';
 import { StringSession } from 'telegram/sessions';
-import { array2dictionary, consoletable, DataDir, waitForever, waitTill } from './functions';
-import { AnnotatedDictionary, ArrayValueType, UnwrapAnnotatedDictionary } from './types';
+import xbytes from 'xbytes';
+
+import { Tonfig } from '@liesauer/tonfig';
+
+import {
+    array2dictionary, consoletable, DataDir, ellipsisLeft, ellipsisMiddle, waitForever, waitTill
+} from './functions';
+import { AnnotatedDictionary, UnwrapAnnotatedDictionary } from './types';
 
 const argv = minimist(process.argv.slice(2));
 
@@ -534,26 +539,30 @@ async function render() {
             });
         }
 
-        const maxFileNameLength = 25;
         const tableData = downloading.map(v => {
-            let fileName = v.fileName;
+            const channelTitle = ellipsisMiddle(v.channelTitle, 10);
+            const fileName = ellipsisLeft(v.fileName, 15);
 
-            if (fileName.length > maxFileNameLength) {
-                fileName = '...' + fileName.substring(fileName.length - maxFileNameLength);
-            }
-
+            let size = '';
             let percent = '';
 
             if (v.totalBytes && !v.totalBytes.isZero()) {
                 const downloaded = v.downloadedBytes.toJSNumber();
                 const total = v.totalBytes.toJSNumber();
+
+                const dSize = xbytes(downloaded);
+                const tSize = xbytes(total);
+
+                size = `${dSize}/${tSize}`;
                 percent = (downloaded / total * 100).toFixed(2) + '%';
+                percent = percent.padStart(6, ' ');
             }
 
             return {
-                "频道ID": v.channelId,
+                "频道": channelTitle,
                 "文件名": fileName,
                 "进度": percent,
+                "大小": size,
             };
         });
 
