@@ -419,6 +419,7 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
     }
 }
 
+const listChannels = !!argv['list'];
 let channelTable: any[] = [];
 let maxLogHistory = 10;
 let logHistory: string[] = [];
@@ -516,10 +517,14 @@ async function mediaSpider() {
 async function render() {
     console.clear();
 
-    if (channelTable && channelTable.length) {
-        console.log(consoletable(channelTable));
+    if (listChannels) {
+        if (channelTable && channelTable.length) {
+            console.log(consoletable(channelTable));
 
-        uiTimer.stop();
+            uiTimer.stop();
+            return;
+        }
+
         return;
     }
 
@@ -652,8 +657,6 @@ async function main() {
     }
 
     channelInfos = await getChannelInfos(client);
-
-    const listChannels = !!argv['list'];
 
     if (listChannels) {
         channelTable = [];
