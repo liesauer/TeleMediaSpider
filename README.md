@@ -34,8 +34,6 @@ yarn
 <br />
 [Authentication | GramJS](https://gram.js.org/getting-started/authorization#getting-api-id-and-api-hash)
 
-代理看情况配置，可参考[Using MTProxies and Socks5 Proxies.](https://gram.js.org/getting-started/authorization#using-mtproxies-and-socks5-proxies)。
-
 ## 2. 获取频道列表
 ```bash
 TeleMediaSpider --list
@@ -45,6 +43,7 @@ TeleMediaSpider --list
 `spider.channels`
 
 示例：
+
 ```toml
 [spider]
 channels = [ "频道id1", "频道id2" ]
@@ -57,13 +56,15 @@ channels = [ "频道id1", "频道id2" ]
 默认抓取频道的`图片` `视频` `音频` `文件`，如果你想特定的频道只抓取特定的数据，也可自由配置，有效值：`photo` `video` `audio` `file`。
 
 将以下配置
+
 ```toml
-[spider]
-medias = { }
+  [spider.medias]
+  _ = "photo,video,audio,file"
 ```
+
 修改为
+
 ```toml
-[spider]
   [spider.medias]
   频道id1 = "photo"
   频道id2 = "photo,video,audio,file"
@@ -76,11 +77,65 @@ medias = { }
 **注意：这并不是传统意义上的并发下载，而是指多频道同时下载，单一频道只能一条一条信息从前往后解析下载。**
 
 将以下配置
+
 ```toml
 [spider]
 concurrency = 5
 ```
+
 修改为你想要的多频道同时下载数，默认为5个频道同时下载。
+
+## 5. 大小过滤
+默认抓取大小不超过10GB的文件，如有需求，可按全局配置或按频道配置文件大小过滤。
+
+格式：`下限-上限`
+<br />
+单位：`字节`
+<br />
+进制：`1024`
+<br />
+示例：`102400-10485760`
+<br />
+解释：抓取文件大小在 `100KB ~ 10MB` 之间的文件（含）
+
+优先级：`频道配置 > 全局配置`
+
+### 5.1. 全局配置
+修改以下配置即可
+
+```toml
+[filter.default]
+photo = "0-10737418240"
+video = "0-10737418240"
+audio = "0-10737418240"
+file = "0-10737418240"
+```
+
+### 5.2. 频道配置
+修改以下配置即可
+
+```toml
+[filter.photo]
+频道id1 = "102400-999999999"
+
+[filter.video]
+频道id1 = "102400-999999999"
+
+[filter.audio]
+频道id1 = "102400-999999999"
+
+[filter.file]
+频道id1 = "102400-999999999"
+```
+
+## 代理设置
+参考：
+<br />
+[Using MTProxies and Socks5 Proxies](https://gram.js.org/getting-started/authorization#using-mtproxies-and-socks5-proxies)
+
+# 配置说明
+
+**配置文件中所有的 `_` 配置项都是占位，用来当成示例配置供参考填写的，删除无实际影响。**
 
 # 数据保存
 所有数据都保存在 `data/{频道id}` 文件夹下，文件名格式：`{频道id}_{消息id}[_{原文件名}]`。

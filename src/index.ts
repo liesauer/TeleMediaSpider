@@ -242,6 +242,67 @@ async function getChannelMessages(client: TelegramClient, channelId: string, las
     return { lastId: lastId || 0, messages };
 }
 
+function shouldDownload(channelId: string, media: Api.TypeMessageMedia, type: "photo" | "video" | "audio" | "file") {
+    let sizeNum: number;
+
+    if (media instanceof Api.MessageMediaPhoto) {
+        const photo = media.photo as Api.Photo;
+
+        if (photo?.sizes?.length) {
+            sizeNum = photo.sizes.map(v => {
+                if (v instanceof Api.PhotoSize) {
+                    return v.size;
+                } else if (v instanceof Api.PhotoCachedSize) {
+                    return v.bytes.length;
+                } else if (v instanceof Api.PhotoStrippedSize) {
+                    return v.bytes.length;
+                } else if (v instanceof Api.PhotoSizeProgressive) {
+                    return v.sizes.sort((a, b) => b - a)[0];
+                } else if (v instanceof Api.PhotoPathSize) {
+                    return v.bytes.length;
+                }
+            }).sort((a, b) => b - a)[0];
+        }
+    } else if (media instanceof Api.MessageMediaDocument) {
+        const document = media.document as Api.Document;
+
+        if (document?.size) {
+            sizeNum = document.size.toJSNumber();
+        }
+    }
+
+    // 暂时不识别的文件，宁愿多下载也不要缺
+    if (sizeNum == null) return true;
+
+    const limit1 = tonfig.get<string>(['filter', type, channelId], '');
+    const limit2 = tonfig.get<string>(['filter', 'default', type], '');
+
+    const limit = `${limit1 || limit2}`.split('-');
+
+    // 格式：下限-上限，示例：10240-999999999，单位：字节
+    if (limit.length == 2) {
+        const num1 = Number(limit[0]);
+        const num2 = Number(limit[1]);
+
+        if (!isNaN(num1) && !isNaN(num2)) {
+            const min = Math.min(num1, num2);
+            const max = Math.max(num1, num2);
+
+            if (sizeNum < min || sizeNum > max) {
+                return false;
+            }
+        }
+    }
+
+    // if (sizeNum != null) {
+    //     const tSize = xbytes(sizeNum);
+
+    //     addLogHistory(tSize, tSize);
+    // }
+
+    return true;
+}
+
 async function downloadChannelMedia(client: TelegramClient, channelId: string, message: Api.MessageService, channelInfo: UnwrapAnnotatedDictionary<typeof waitQueue>, medias?: string[]) {
     const photo = message.photo as Api.Photo;
     const video = message.video as Api.Document;
@@ -253,11 +314,15 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
     if (photo && (!medias || medias.includes('photo'))) {
         let media = message.media as Api.MessageMediaDocument;
 
-        const dir = DataDir() + '/' + channelId.toString();
+        if (!shouldDownload(channelId, media, "photo")) {
+            return;
+        }
+
+        const dir = DataDir() + '/' + channelId;
 
         mkdirSync(dir, { recursive: true });
 
-        let filename = `${channelId.toString()}${topicId ? '_' + topicId : ''}_${message.id}`;
+        let filename = `${channelId}${topicId ? '_' + topicId : ''}_${message.id}`;
         let ext = '';
         let noExt = false;
 
@@ -295,11 +360,15 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
     if (video && (!medias || medias.includes('video'))) {
         let media = message.media as Api.MessageMediaDocument;
 
-        const dir = DataDir() + '/' + channelId.toString();
+        if (!shouldDownload(channelId, media, "video")) {
+            return;
+        }
+
+        const dir = DataDir() + '/' + channelId;
 
         mkdirSync(dir, { recursive: true });
 
-        let filename = `${channelId.toString()}${topicId ? '_' + topicId : ''}_${message.id}`;
+        let filename = `${channelId}${topicId ? '_' + topicId : ''}_${message.id}`;
         let ext = '';
         let noExt = false;
 
@@ -337,11 +406,15 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
     if (audio && (!medias || medias.includes('audio'))) {
         let media = message.media as Api.MessageMediaDocument;
 
-        const dir = DataDir() + '/' + channelId.toString();
+        if (!shouldDownload(channelId, media, "audio")) {
+            return;
+        }
+
+        const dir = DataDir() + '/' + channelId;
 
         mkdirSync(dir, { recursive: true });
 
-        let filename = `${channelId.toString()}${topicId ? '_' + topicId : ''}_${message.id}`;
+        let filename = `${channelId}${topicId ? '_' + topicId : ''}_${message.id}`;
         let ext = '';
         let noExt = false;
 
@@ -379,11 +452,15 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
     if (file && (!medias || medias.includes('file'))) {
         let media = message.media as Api.MessageMediaDocument;
 
-        const dir = DataDir() + '/' + channelId.toString();
+        if (!shouldDownload(channelId, media, "file")) {
+            return;
+        }
+
+        const dir = DataDir() + '/' + channelId;
 
         mkdirSync(dir, { recursive: true });
 
-        let filename = `${channelId.toString()}${topicId ? '_' + topicId : ''}_${message.id}`;
+        let filename = `${channelId}${topicId ? '_' + topicId : ''}_${message.id}`;
         let ext = '';
         let noExt = false;
 
@@ -595,7 +672,30 @@ async function main() {
             channels: [],
             titles: {},
             lastIds: {},
-            medias: {},
+            medias: {
+                _: "photo,video,audio,file",
+            },
+        },
+
+        filter: {
+            default: {
+                photo: "0-10737418240",
+                video: "0-10737418240",
+                audio: "0-10737418240",
+                file:  "0-10737418240",
+            },
+            photo: {
+                _: "0-10737418240",
+            },
+            video: {
+                _: "0-10737418240",
+            },
+            audio: {
+                _: "0-10737418240",
+            },
+            file: {
+                _: "0-10737418240",
+            },
         },
 
         proxy: {
