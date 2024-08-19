@@ -1977,10 +1977,10 @@ tar-stream@^2.1.4:
     inherits "^2.0.3"
     readable-stream "^3.1.1"
 
-telegram@^2.20.15:
-  version "2.20.15"
-  resolved "https://registry.yarnpkg.com/telegram/-/telegram-2.20.15.tgz#75193b330fd7159ccc459d5b439353ba8d23ada3"
-  integrity sha512-yc5ScUlg5X47z9BhGTJEaHqSYe8cGsyjUHw1+vGD2vj9ntrbp2C/YpOvP0cepTJk/k5xJ39ZJeFY0xQzkk/LMg==
+telegram@^2.23.10:
+  version "2.23.10"
+  resolved "https://registry.yarnpkg.com/telegram/-/telegram-2.23.10.tgz#8df7e947b1e5b92c3b8f5c33e8d1d99153753e25"
+  integrity sha512-ofn6Jhig83GW0wHxpDPoP4EffNKMloZMOhSdN6ltgWUSi3rE6+KWQDi2Gcvem2Xp+sodUw9uBDyq71aLcE3iKA==
   dependencies:
     "@cryptography/aes" "^0.1.1"
     async-mutex "^0.3.0"
