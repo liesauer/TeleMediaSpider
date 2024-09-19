@@ -22,17 +22,13 @@ yarn
 ## 1. 首次运行
 第一次运行时，会自动生成 `data/config.toml` 配置文件，需要配置以下内容：
 <br />
-`account.apiId`（参考文档）
+`account.apiId`（参考文档，[Getting API ID and API HASH | GramJS](https://gram.js.org/getting-started/authorization#getting-api-id-and-api-hash)）
 <br />
-`account.apiHash`（参考文档）
+`account.apiHash`（参考文档，[Getting API ID and API HASH | GramJS](https://gram.js.org/getting-started/authorization#getting-api-id-and-api-hash)）
 <br />
-`account.account`（Telegram账号）
+`account.account`（Telegram账号，**需要加上区号**，比如中国大陆就是：+861xxxxxxxxxx，其他区域同理）
 <br />
 ~~`account.session`~~（这个不需要填）
-
-参考：
-<br />
-[Authentication | GramJS](https://gram.js.org/getting-started/authorization#getting-api-id-and-api-hash)
 
 ## 2. 获取频道列表
 ```bash
