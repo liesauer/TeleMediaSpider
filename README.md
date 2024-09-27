@@ -14,14 +14,19 @@ yarn
 # 如何打包
 `VS Code` 中运行 `pack executable` 任务，可执行文件会生成到 `output` 目录下。
 
+<br />
+<br />
+<br />
+<br />
+
 # 如何使用
 
 ## 0. 下载
 已打包好的TeleSpider可在这里下载：[https://github.com/liesauer/TeleMediaSpider/releases](https://github.com/liesauer/TeleMediaSpider/releases)，包含 `Windows x64` `Linux x64` 多个版本，如需其他版本，请自行打包。
 
 ## 1. 首次运行
-第一次运行时，会自动生成 `data/config.toml` 配置文件，需要配置以下内容：
-<br />
+第一次直接双击运行，会自动生成 `data/config.toml` 配置文件并提示让你配置，直接叉掉程序，并配置以下内容：
+<br /><br />
 `account.apiId`（参考文档，[Getting API ID and API HASH | GramJS](https://gram.js.org/getting-started/authorization#getting-api-id-and-api-hash)）
 <br />
 `account.apiHash`（参考文档，[Getting API ID and API HASH | GramJS](https://gram.js.org/getting-started/authorization#getting-api-id-and-api-hash)）
@@ -34,9 +39,13 @@ yarn
 ```bash
 TeleMediaSpider --list
 ```
-列举出你账号加入的所有频道，复制频道ID，并打开 `data/config.toml` 配置文件，配置以下内容：
-<br />
+完成账号配置后，使用终端运行上面的命令，第一次会要求你登录，填入收到的验证码就行，然后会列举出你账号加入的所有频道，复制频道ID，并打开 `data/config.toml` 配置文件，配置以下内容：
+<br /><br />
 `spider.channels`
+
+配置好要抓取的频道id后，也是叉掉程序，再次双击打开，就可以开始抓取了。
+
+**注意：这是获取正确的频道id的唯一方法，不可以使用机器人获取，机器人获取到的频道id无法使用。**
 
 示例：
 
