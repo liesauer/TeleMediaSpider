@@ -581,7 +581,15 @@ async function mediaSpider() {
          */
         if (waitQueue[channelId].messages.length) continue;
 
-        const messages = await getChannelMessages(client, channelId, tonfig.get(['spider', 'lastIds', channelId], 0), undefined, -1);
+        const lastId = tonfig.get(['spider', 'lastIds', channelId], 0);
+
+        const messages = await getChannelMessages(client, channelId, lastId, undefined, -1);
+
+        if (!lastId && !messages.messages.length) {
+            const topId = messages.messages.length ? messages.messages[0].id : messages.lastId;
+            tonfig.set(['spider', 'lastIds', channelId], topId);
+            await tonfig.save();
+        }
 
         for (const message of messages.messages) {
             waitQueue[channelId].messages.push(message);
