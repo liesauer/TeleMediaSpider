@@ -303,7 +303,7 @@ function shouldDownload(channelId: string, media: Api.TypeMessageMedia, type: "p
     return true;
 }
 
-async function downloadChannelMedia(client: TelegramClient, channelId: string, message: Api.MessageService, channelInfo: UnwrapAnnotatedDictionary<typeof waitQueue>, medias?: string[]) {
+async function downloadChannelMedia(client: TelegramClient, channelId: string, message: Api.MessageService, channelInfo: UnwrapAnnotatedDictionary<typeof waitQueue>, medias?: string[], groupMessage?: boolean) {
     const photo = message.photo as Api.Photo;
     const video = message.video as Api.Document;
     const audio = message.audio as Api.Document;
@@ -320,13 +320,25 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             return;
         }
 
-        const dir = DataDir() + '/' + channelId + (topicId ? '/' + topicId : '');
+        let dir = DataDir() + '/' + channelId;
 
-        mkdirSync(dir, { recursive: true });
-
-        let filename = `${groupedId ? groupedId + '_' : ''}${messageId}`;
+        let filename = `${messageId}`;
         let ext = '';
         let noExt = false;
+
+        if (topicId) {
+            dir += `/_${topicId}`;
+        }
+
+        if (groupedId) {
+            if (groupMessage) {
+                dir += `/${groupedId}`;
+            } else {
+                filename = `${groupedId}_` + filename;
+            }
+        }
+
+        mkdirSync(dir, { recursive: true });
 
         if (message?.file) {
             ext = Object.keys(mimetics.mimeTypeMap).find(v => {
@@ -366,13 +378,25 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             return;
         }
 
-        const dir = DataDir() + '/' + channelId + (topicId ? '/' + topicId : '');
+        let dir = DataDir() + '/' + channelId;
 
-        mkdirSync(dir, { recursive: true });
-
-        let filename = `${groupedId ? groupedId + '_' : ''}${messageId}`;
+        let filename = `${messageId}`;
         let ext = '';
         let noExt = false;
+
+        if (topicId) {
+            dir += `/_${topicId}`;
+        }
+
+        if (groupedId) {
+            if (groupMessage) {
+                dir += `/${groupedId}`;
+            } else {
+                filename = `${groupedId}_` + filename;
+            }
+        }
+
+        mkdirSync(dir, { recursive: true });
 
         if (message?.file) {
             ext = Object.keys(mimetics.mimeTypeMap).find(v => {
@@ -412,13 +436,25 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             return;
         }
 
-        const dir = DataDir() + '/' + channelId + (topicId ? '/' + topicId : '');
+        let dir = DataDir() + '/' + channelId;
 
-        mkdirSync(dir, { recursive: true });
-
-        let filename = `${groupedId ? groupedId + '_' : ''}${messageId}`;
+        let filename = `${messageId}`;
         let ext = '';
         let noExt = false;
+
+        if (topicId) {
+            dir += `/_${topicId}`;
+        }
+
+        if (groupedId) {
+            if (groupMessage) {
+                dir += `/${groupedId}`;
+            } else {
+                filename = `${groupedId}_` + filename;
+            }
+        }
+
+        mkdirSync(dir, { recursive: true });
 
         if (message?.file) {
             ext = Object.keys(mimetics.mimeTypeMap).find(v => {
@@ -458,13 +494,25 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             return;
         }
 
-        const dir = DataDir() + '/' + channelId + (topicId ? '/' + topicId : '');
+        let dir = DataDir() + '/' + channelId;
 
-        mkdirSync(dir, { recursive: true });
-
-        let filename = `${groupedId ? groupedId + '_' : ''}${messageId}`;
+        let filename = `${messageId}`;
         let ext = '';
         let noExt = false;
+
+        if (topicId) {
+            dir += `/_${topicId}`;
+        }
+
+        if (groupedId) {
+            if (groupMessage) {
+                dir += `/${groupedId}`;
+            } else {
+                filename = `${groupedId}_` + filename;
+            }
+        }
+
+        mkdirSync(dir, { recursive: true });
 
         if (message?.file) {
             ext = Object.keys(mimetics.mimeTypeMap).find(v => {
@@ -685,6 +733,7 @@ async function main() {
             medias: {
                 _: "photo,video,audio,file",
             },
+            groupMessage: false,
         },
 
         filter: {
@@ -783,6 +832,8 @@ async function main() {
 
     const concurrency = tonfig.get<number>("spider.concurrency", 5);
 
+    const groupMessage = tonfig.get<boolean>("spider.groupMessage", false);
+
     execQueue = execQueue || queue(async function(task, callback) {
         let channelInfo: UnwrapAnnotatedDictionary<typeof waitQueue>;
 
@@ -798,7 +849,7 @@ async function main() {
         const message = channelInfo.messages[0];
         const mediasArr = channelInfo.medias;
 
-        await downloadChannelMedia(client, channelId, message, channelInfo, mediasArr).then(async () => {
+        await downloadChannelMedia(client, channelId, message, channelInfo, mediasArr, groupMessage).then(async () => {
             channelInfo.messages.shift();
 
             // 下载成功，保存当前频道位置
