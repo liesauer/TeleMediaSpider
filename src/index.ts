@@ -309,7 +309,9 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
     const audio = message.audio as Api.Document;
     const file  = message.document && message.document.attributes.length == 1 && message.document.attributes[0].className == "DocumentAttributeFilename" ? message.file : null;
 
-    const topicId = message.replyTo?.replyToTopId || message.replyToMsgId;
+    const messageId = message.id;
+    const groupedId = message.groupedId;
+    const topicId = message.replyTo?.replyToTopId || message.replyTo?.replyToMsgId || message.replyToMsgId;
 
     if (photo && (!medias || medias.includes('photo'))) {
         let media = message.media as Api.MessageMediaDocument;
@@ -318,11 +320,11 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             return;
         }
 
-        const dir = DataDir() + '/' + channelId;
+        const dir = DataDir() + '/' + channelId + (topicId ? '/' + topicId : '');
 
         mkdirSync(dir, { recursive: true });
 
-        let filename = `${channelId}${topicId ? '_' + topicId : ''}_${message.id}`;
+        let filename = `${groupedId ? groupedId + '_' : ''}${messageId}`;
         let ext = '';
         let noExt = false;
 
@@ -364,11 +366,11 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             return;
         }
 
-        const dir = DataDir() + '/' + channelId;
+        const dir = DataDir() + '/' + channelId + (topicId ? '/' + topicId : '');
 
         mkdirSync(dir, { recursive: true });
 
-        let filename = `${channelId}${topicId ? '_' + topicId : ''}_${message.id}`;
+        let filename = `${groupedId ? groupedId + '_' : ''}${messageId}`;
         let ext = '';
         let noExt = false;
 
@@ -410,11 +412,11 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             return;
         }
 
-        const dir = DataDir() + '/' + channelId;
+        const dir = DataDir() + '/' + channelId + (topicId ? '/' + topicId : '');
 
         mkdirSync(dir, { recursive: true });
 
-        let filename = `${channelId}${topicId ? '_' + topicId : ''}_${message.id}`;
+        let filename = `${groupedId ? groupedId + '_' : ''}${messageId}`;
         let ext = '';
         let noExt = false;
 
@@ -456,11 +458,11 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             return;
         }
 
-        const dir = DataDir() + '/' + channelId;
+        const dir = DataDir() + '/' + channelId + (topicId ? '/' + topicId : '');
 
         mkdirSync(dir, { recursive: true });
 
-        let filename = `${channelId}${topicId ? '_' + topicId : ''}_${message.id}`;
+        let filename = `${groupedId ? groupedId + '_' : ''}${messageId}`;
         let ext = '';
         let noExt = false;
 
