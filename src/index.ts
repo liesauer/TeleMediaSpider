@@ -16,6 +16,7 @@ import {
     array2dictionary, consoletable, DataDir, ellipsisLeft, ellipsisMiddle, waitForever, waitTill
 } from './functions';
 import { AnnotatedDictionary, UnwrapAnnotatedDictionary } from './types';
+import { Dialog } from 'telegram/tl/custom/dialog';
 
 const argv = minimist(process.argv.slice(2));
 
@@ -73,14 +74,13 @@ function workerErrorHandler(error: any, job: Cron) {
 };
 
 async function getChannelInfos(client: TelegramClient) {
-    const dialogs = await client.invoke(
-        new Api.messages.GetDialogs({
-            offsetPeer: new Api.InputPeerEmpty(),
-            limit: 500,
-        })
-    ) as Exclude<Api.messages.TypeDialogs, Api.messages.DialogsNotModified>;
+    let dialogs: Dialog[] = [];
 
-    const ids = dialogs.dialogs.map(v => v.peer).filter(v => v.className == "PeerChannel").map(v => v as Api.PeerChannel);
+    for await (const dialog of client.iterDialogs()) {
+        dialogs.push(dialog);
+    }
+
+    const ids = dialogs.map(v => v.dialog.peer).filter(v => v.className == "PeerChannel").map(v => v as Api.PeerChannel);
 
     const idsMap = array2dictionary(ids, (i, e) => {
         return { key: e.channelId.toString(), value: e };
