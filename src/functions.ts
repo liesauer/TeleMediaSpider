@@ -1,6 +1,7 @@
 import { Console } from 'console';
 import { basename, dirname } from 'node:path';
 import { Transform } from 'stream';
+import runes from 'runes';
 
 export function AppDir() {
     const executor = basename(process.execPath);
@@ -155,15 +156,19 @@ export function consoletable(input: any) {
 }
 
 export function ellipsisLeft(text: string, maxLength: number) {
-    if (!text || text.length <= maxLength) return text;
+    const chars = runes(text);
 
-    return '...' + text.substring(text.length - maxLength - 3);
+    if (!text || chars.length <= maxLength) return text;
+
+    return '...' + chars.slice(chars.length - maxLength - 3).join('');
 }
 
 export function ellipsisMiddle(text: string, maxLength: number) {
-    if (!text || text.length <= maxLength) return text;
+    const chars = runes(text);
+
+    if (!text || chars.length <= maxLength) return text;
 
     const halfLength = Math.floor((maxLength - 3) / 2);
 
-    return text.substring(0, halfLength) + '...' + text.substring(text.length - halfLength);
+    return chars.slice(0, halfLength).join('') + '...' + chars.slice(chars.length - halfLength).join('');
 }

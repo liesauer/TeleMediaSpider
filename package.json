@@ -23,11 +23,13 @@
     "input": "^1.0.1",
     "mimetics": "^0.0.8",
     "minimist": "^1.2.8",
+    "runes": "^0.4.3",
     "telegram": "^2.23.10",
     "xbytes": "^1.9.1"
   },
   "devDependencies": {
     "@types/node": "^18.11.18",
+    "@types/runes": "^0.4.3",
     "copyfiles": "^2.4.1",
     "javascript-obfuscator": "^4.0.2",
     "pkg": "^5.8.1",
