@@ -570,6 +570,7 @@ const waitQueue: AnnotatedDictionary<{
     totalBytes: bigInt.BigInteger,
     messages: Api.MessageService[],
     medias: string[],
+    lastDownloadTime: number,
 }, "channelId"> = {};
 
 let execQueue;
@@ -616,6 +617,7 @@ async function mediaSpider() {
                 totalBytes: null,
                 messages: [],
                 medias: mediasArr,
+                lastDownloadTime: 0,
             };
         }
 
@@ -676,6 +678,7 @@ async function render() {
                 totalBytes: null,
                 messages: null,
                 medias: null,
+                lastDownloadTime: 0,
             });
         }
 
@@ -838,7 +841,9 @@ async function main() {
         let channelInfo: UnwrapAnnotatedDictionary<typeof waitQueue>;
 
         await waitTill(() => {
-            channelInfo = Object.values(waitQueue).find(v => !v.downloading && v.messages.length);
+            channelInfo = Object.values(waitQueue).filter(v => !v.downloading && v.messages.length).sort((a, b) => {
+                return a.lastDownloadTime - b.lastDownloadTime;
+            })[0];
 
             return !!channelInfo;
         }, 100);
@@ -859,6 +864,7 @@ async function main() {
             // 下载失败，啥也不用管，后面根据队列自动重试
         }).finally(() => {
             channelInfo.downloading = false;
+            channelInfo.lastDownloadTime = Date.now();
 
             callback();
         });
