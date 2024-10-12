@@ -309,9 +309,15 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
     const audio = message.audio as Api.Document;
     const file  = message.document && message.document.attributes.length == 1 && message.document.attributes[0].className == "DocumentAttributeFilename" ? message.file : null;
 
+    /**
+     * MessageService：修改频道头像、信息等等
+     */
+    const className = message.className as string;
     const messageId = message.id;
     const groupedId = message.groupedId;
     const topicId = message.replyTo?.replyToTopId || message.replyTo?.replyToMsgId || message.replyToMsgId;
+
+    if (className != "Message") return;
 
     if (photo && (!medias || medias.includes('photo'))) {
         let media = message.media as Api.MessageMediaDocument;
