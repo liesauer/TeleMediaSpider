@@ -148,7 +148,7 @@
                 "pkg",
                 "--no-bytecode",
                 "--public-packages",
-                "*",
+                "\"*\"",
                 "--public",
                 "--compress",
                 "GZip",
