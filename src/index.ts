@@ -1,6 +1,6 @@
 import queue from 'async/queue';
 import Cron from 'croner';
-import { mkdirSync } from 'fs';
+import { mkdirSync, writeFileSync } from 'fs';
 import { writeFile } from 'fs/promises';
 import input from 'input';
 import mimetics from 'mimetics';
@@ -553,7 +553,10 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
 }
 
 const listChannels = !!argv['list'];
-let channelTable: any[] = [];
+let channelTable: {
+    ID: string,
+    频道名: string,
+}[] = [];
 let maxLogHistory = 10;
 let logHistory: string[] = [];
 
@@ -664,6 +667,25 @@ async function render() {
         if (channelTable && channelTable.length) {
             console.log(consoletable(channelTable));
 
+            {
+                const maxIdLength = Math.max(...channelTable.map(v => v.ID.length));
+
+                const logFile = DataDir() + '/channels_list.log';
+
+                const logContent = channelTable.map(v => {
+                    const id = v.ID.padStart(maxIdLength, ' ');
+                    const title = v.频道名;
+
+                    return `${id}    ${title}`;
+                }).join("\n");
+
+                writeFileSync(logFile, logContent, {
+                    encoding: 'utf-8',
+                });
+
+                console.log(`频道列表已保存：${logFile}`);
+            }
+
             uiTimer.stop();
             return;
         }
@@ -725,6 +747,8 @@ async function render() {
 
 async function main() {
     logger = new MyLogger();
+
+    mkdirSync(DataDir(), { recursive: true });
 
     tonfig = await Tonfig.loadFile(DataDir() + '/config.toml', {
         account: {
