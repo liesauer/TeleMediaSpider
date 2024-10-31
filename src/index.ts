@@ -782,11 +782,7 @@ async function render() {
     }
 }
 
-async function main() {
-    logger = new MyLogger();
-
-    mkdirSync(DataDir(), { recursive: true });
-
+async function loadConfig() {
     tonfig = await Tonfig.loadFile(DataDir() + '/config.toml', {
         account: {
             apiId: 0,
@@ -841,6 +837,92 @@ async function main() {
     });
 
     await tonfig.save();
+}
+
+function getAccountConfig() {
+    const apiId = tonfig.get<number>("account.apiId");
+    const apiHash = tonfig.get<string>("account.apiHash");
+    const account = tonfig.get<string>("account.account");
+    const session = tonfig.get<string>("account.session", "");
+
+    return { apiId, apiHash, account, session };
+}
+
+function getProxyConfig() {
+    const ip = tonfig.get<string>("proxy.ip", "");
+    const port = tonfig.get<number>("proxy.port", 0);
+    const username = tonfig.get<string>("proxy.username", "");
+    const password = tonfig.get<string>("proxy.password", "");
+    const MTProxy = tonfig.get<boolean>("proxy.MTProxy", false);
+    const secret = tonfig.get<string>("proxy.secret", "");
+    const socksType = tonfig.get<5 | 4>("proxy.socksType", 5);
+    const timeout = tonfig.get<number>("proxy.timeout", 2);
+
+    return { ip, port, username, password, MTProxy, secret, socksType, timeout };
+}
+
+async function checkConfig() {
+    await loadConfig();
+
+    const { apiId, apiHash, account } = getAccountConfig();
+
+    if (!apiId || !apiHash || !account) {
+        logger.info('请编辑 data/config.toml 进行账号配置，软件将开始检测并自动重载');
+        logger.info('https://github.com/liesauer/TeleMediaSpider?tab=readme-ov-file#1-%E9%A6%96%E6%AC%A1%E8%BF%90%E8%A1%8C');
+
+        const timer = setInterval(() => {
+            loadConfig();
+        }, 3000);
+
+        await waitTill(() => {
+            const { apiId, apiHash, account } = getAccountConfig();
+
+            if (apiId && apiHash && account) {
+                clearInterval(timer);
+                logger.info('读取到账号配置，正在重载');
+
+                return true;
+            }
+
+            return false;
+        }, 1000);
+    }
+}
+
+async function checkChannel() {
+    await loadConfig();
+
+    const allowChannels = tonfig.get<string[]>('spider.channels', []);
+
+    if (!allowChannels?.length) {
+        logger.info('请编辑 data/config.toml 进行频道配置，软件将开始检测并自动重载');
+        logger.info('https://github.com/liesauer/TeleMediaSpider?tab=readme-ov-file#2-%E9%85%8D%E7%BD%AE%E9%A2%91%E9%81%93%E5%88%97%E8%A1%A8');
+
+        const timer = setInterval(() => {
+            loadConfig();
+        }, 3000);
+
+        await waitTill(() => {
+            const allowChannels = tonfig.get<string[]>('spider.channels', []);
+
+            if (allowChannels?.length) {
+                clearInterval(timer);
+                logger.info('读取到频道配置，正在重载');
+
+                return true;
+            }
+
+            return false;
+        }, 1000);
+    }
+}
+
+async function main() {
+    logger = new MyLogger();
+
+    mkdirSync(DataDir(), { recursive: true });
+
+    await checkConfig();
 
     const saveRawMessage = tonfig.get<boolean>("spider.saveRawMessage", false);
 
@@ -848,27 +930,15 @@ async function main() {
         database = Db.db();
     }
 
-    const apiId = tonfig.get<number>("account.apiId");
-    const apiHash = tonfig.get<string>("account.apiHash");
-    const account = tonfig.get<string>("account.account");
+    let { apiId, apiHash, account, session } = getAccountConfig();
 
-    if (!apiId || !apiHash || !account) {
-        logger.warn('请编辑 data/config.toml 进行账号配置，并重启软件');
-        await waitForever();
+    if (!session) {
+        logger.info('请按提示进行登录');
     }
 
-    const proxy = {
-        ip: tonfig.get<string>("proxy.ip", ""),
-        port: tonfig.get<number>("proxy.port", 0),
-        username: tonfig.get<string>("proxy.username", ""),
-        password: tonfig.get<string>("proxy.password", ""),
-        MTProxy: tonfig.get<boolean>("proxy.MTProxy", false),
-        secret: tonfig.get<string>("proxy.secret", ""),
-        socksType: tonfig.get<5 | 4>("proxy.socksType", 5),
-        timeout: tonfig.get<number>("proxy.timeout", 2),
-    };
+    const proxy = getProxyConfig();
 
-    client = new TelegramClient(new StringSession(tonfig.get<string>("account.session", "")), apiId, apiHash, {
+    client = new TelegramClient(new StringSession(session), apiId, apiHash, {
         baseLogger: logger,
         connectionRetries: 5,
         useWSS: false,
@@ -882,14 +952,19 @@ async function main() {
         onError: (err) => logger.error(err.message),
     });
 
-    if (!tonfig.get<string>("account.session")) {
-        tonfig.set("account.session", <string><unknown>client.session.save());
+    if (!session) {
+        session = <string><unknown>client.session.save();
+        tonfig.set("account.session", session);
 
         await tonfig.save();
-    }
 
-    if (uiTimer) {
-        uiTimer.resume();
+        if (session) {
+            logger.info('登录成功，登录状态会保持');
+        } else {
+            logger.info('登录失败');
+
+            await waitForever();
+        }
     }
 
     channelInfos = await getChannelInfos(client);
@@ -936,6 +1011,14 @@ async function main() {
                 satement.run(tid, id, title);
             }
         }
+    }
+
+    if (!listChannels) {
+        await checkChannel();
+    }
+
+    if (uiTimer) {
+        uiTimer.resume();
     }
 
     if (listChannels) {

@@ -25,7 +25,7 @@ yarn
 已打包好的TeleSpider可在这里下载：[https://github.com/liesauer/TeleMediaSpider/releases](https://github.com/liesauer/TeleMediaSpider/releases)，包含 `Windows x64` `Linux x64` 多个版本，如需其他版本，请自行打包。
 
 ## 1. 首次运行
-第一次直接双击运行，会自动生成 `data/config.toml` 配置文件并提示让你配置，直接叉掉程序，并配置以下内容：
+直接运行，根据提示进行账号配置，配置以下内容：
 <br /><br />
 `account.apiId`（参考文档，[Getting API ID and API HASH | GramJS](https://gram.js.org/getting-started/authorization#getting-api-id-and-api-hash)）
 <br />
@@ -33,19 +33,19 @@ yarn
 <br />
 `account.account`（Telegram账号，**需要加上区号**，比如中国大陆就是：+861xxxxxxxxxx，其他区域同理）
 <br />
-~~`account.session`~~（这个不需要填）
+~~`account.session`~~（这个不需要填，登录后自动保存）
 
-## 2. 获取频道列表
-```bash
-TeleMediaSpider --list
-```
-完成账号配置后，使用终端运行上面的命令，第一次会要求你登录，填入收到的验证码就行，然后会列举出你账号加入的所有频道，复制频道ID，并打开 `data/config.toml` 配置文件，配置以下内容：
+配置保存后，根据提示进行登录（仅第一次需要）
+
+## 2. 配置频道列表
+
+登录成功后，根据提示进行频道配置，配置以下内容：
 <br /><br />
 `spider.channels`
 
-配置好要抓取的频道id后，也是叉掉程序，再次双击打开，就可以开始抓取了。
+**频道id可以在频道列表文件 `data/channels.txt` 中找到并复制**
 
-**注意：这是获取正确的频道id的唯一方法，不可以使用机器人获取，机器人获取到的频道id无法使用。**
+配置保存后，就会自动开始抓取了。
 
 示例：
 
@@ -54,9 +54,9 @@ TeleMediaSpider --list
 channels = [ "频道id1", "频道id2" ]
 ```
 
-如何抓取自己的已保存信息？
+**如何抓取自己的已保存信息？**
 <br />
-使用固定的频道id：`me` 即可，其他不变。
+使用固定的频道id：`me` 即可。
 
 默认抓取频道的`图片` `视频` `音频` `文件`，如果你想特定的频道只抓取特定的数据，也可自由配置，有效值：`photo` `video` `audio` `file`。
 
@@ -75,8 +75,8 @@ channels = [ "频道id1", "频道id2" ]
   频道id2 = "photo,video,audio,file"
 ```
 
-## 3. 正式抓取
-直接运行 `TeleMediaSpider`，爬虫将会自动抓取频道信息，自动获取新消息，支持断点续爬，可任意时刻随意关闭软件。
+## 3. 开始抓取
+配置完账号信息、频道列表后，就会自动开始抓取啦，智能获取新消息，支持断点续抓，可任意时候随意关闭软件。
 
 ## 4. 并发下载
 **注意：这并不是传统意义上的并发下载，而是指多频道同时下载，单一频道只能一条一条信息从前往后解析下载。**
@@ -139,6 +139,8 @@ file = "0-10737418240"
 [Using MTProxies and Socks5 Proxies](https://gram.js.org/getting-started/authorization#using-mtproxies-and-socks5-proxies)
 
 # 配置说明
+
+**除了第一次配置账号信息，修改任意配置都需要重启软件生效**
 
 **配置文件中所有的 `_` 配置项都是占位，用来当成示例配置供参考填写的，删除无实际影响。**
 
