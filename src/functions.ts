@@ -1,7 +1,8 @@
 import { Console } from 'console';
+import crypto from 'crypto';
 import { basename, dirname } from 'node:path';
-import { Transform } from 'stream';
 import runes from 'runes';
+import { Transform } from 'stream';
 
 export function AppDir() {
     const executor = basename(process.execPath);
@@ -171,4 +172,8 @@ export function ellipsisMiddle(text: string, maxLength: number) {
     const halfLength = Math.floor((maxLength - 3) / 2);
 
     return chars.slice(0, halfLength).join('') + '...' + chars.slice(chars.length - halfLength).join('');
+}
+
+export function md5(text: string) {
+    return crypto.createHash('md5').update(text).digest('hex');
 }

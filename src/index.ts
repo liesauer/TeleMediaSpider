@@ -1,4 +1,5 @@
 import queue from 'async/queue';
+import { Statement } from 'better-sqlite3';
 import Cron from 'croner';
 import { mkdirSync, writeFileSync } from 'fs';
 import { writeFile } from 'fs/promises';
@@ -8,15 +9,17 @@ import minimist from 'minimist';
 import { Api, Logger, TelegramClient } from 'telegram';
 import { LogLevel } from 'telegram/extensions/Logger';
 import { StringSession } from 'telegram/sessions';
+import { Dialog } from 'telegram/tl/custom/dialog';
 import xbytes from 'xbytes';
 
 import { Tonfig } from '@liesauer/tonfig';
 
+import { Db } from './db';
 import {
-    array2dictionary, consoletable, DataDir, ellipsisLeft, ellipsisMiddle, waitForever, waitTill
+    array2dictionary, consoletable, DataDir, ellipsisLeft, ellipsisMiddle, md5, waitForever,
+    waitTill
 } from './functions';
 import { AnnotatedDictionary, UnwrapAnnotatedDictionary } from './types';
-import { Dialog } from 'telegram/tl/custom/dialog';
 
 const argv = minimist(process.argv.slice(2));
 
@@ -303,7 +306,7 @@ function shouldDownload(channelId: string, media: Api.TypeMessageMedia, type: "p
     return true;
 }
 
-async function downloadChannelMedia(client: TelegramClient, channelId: string, message: Api.MessageService, channelInfo: UnwrapAnnotatedDictionary<typeof waitQueue>, medias?: string[], groupMessage?: boolean) {
+async function downloadChannelMedia(client: TelegramClient, channelId: string, message: Api.MessageService, channelInfo: UnwrapAnnotatedDictionary<typeof waitQueue>, medias?: string[], groupMessage?: boolean, saveRawMessage?: boolean) {
     const photo = message.photo as Api.Photo;
     const video = message.video as Api.Document;
     const audio = message.audio as Api.Document;
@@ -313,11 +316,44 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
      * MessageService：修改频道头像、信息等等
      */
     const className = message.className as string;
-    const messageId = message.id;
-    const groupedId = message.groupedId;
-    const topicId = message.replyTo?.replyToTopId || message.replyTo?.replyToMsgId || message.replyToMsgId;
+    const messageId = message.id ? message.id.toString() : '';
+    const groupedId = message.groupedId ? message.groupedId.toString() : '';
+    const _topicId  = message.replyTo?.replyToTopId || message.replyTo?.replyToMsgId || message.replyToMsgId;
+    const topicId   = _topicId ? _topicId.toString() : '';
+    channelId       = channelId || '';
+    const msg_uid   = md5(`${channelId}_${topicId}_${messageId}_${groupedId}`);
 
     if (className != "Message") return;
+
+    let querySatement: Statement;
+    let insertSatement: Statement;
+    let updateSatement: Statement;
+
+    if (saveRawMessage) {
+        if (!downloadChannelMedia['_querySatement']) {
+            downloadChannelMedia['_querySatement'] = database.prepare("SELECT id FROM message WHERE uniqueId = ?");
+        }
+        if (!downloadChannelMedia['_insertSatement']) {
+            downloadChannelMedia['_insertSatement'] = database.prepare("INSERT INTO message (uniqueId, channelId, topicId, messageId, groupedId, text, rawMessage, fileName, savePath, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        }
+        if (!downloadChannelMedia['_updateSatement']) {
+            downloadChannelMedia['_updateSatement'] = database.prepare("UPDATE message SET fileName = ?, savePath = ? WHERE uniqueId = ?");
+        }
+
+        querySatement = downloadChannelMedia['_querySatement'];
+        insertSatement = downloadChannelMedia['_insertSatement'];
+        updateSatement = downloadChannelMedia['_updateSatement'];
+
+        if (!querySatement.get(msg_uid)) {
+            const rawMessage = JSON.stringify(message);
+
+            insertSatement.run(msg_uid, channelId, topicId, messageId, groupedId, message.rawText || '', rawMessage, '', '', message.date || 0);
+        }
+    }
+
+    let rawFileName = '';
+    let fullFileName = '';
+    let absSavePath = '';
 
     if (photo && (!medias || medias.includes('photo'))) {
         let media = message.media as Api.MessageMediaDocument;
@@ -358,12 +394,13 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             const filenameAttr = document.attributes.find(v => v.className == "DocumentAttributeFilename") as Api.DocumentAttributeFilename;
 
             if (filenameAttr && filenameAttr.fileName) {
+                rawFileName = filenameAttr.fileName;
                 filename += `_${filenameAttr.fileName}`;
                 noExt = true;
             }
         }
 
-        const fullFileName = noExt ? filename : `${filename}.${ext || 'jpg'}`;
+        fullFileName = noExt ? filename : `${filename}.${ext || 'jpg'}`;
 
         channelInfo.fileName = fullFileName;
 
@@ -374,7 +411,9 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             },
         });
 
-        await writeFile(`${dir}/${fullFileName}`, buffer);
+        absSavePath = `${dir}/${fullFileName}`;
+
+        await writeFile(absSavePath, buffer);
     }
 
     if (video && (!medias || medias.includes('video'))) {
@@ -416,12 +455,13 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             const filenameAttr = document.attributes.find(v => v.className == "DocumentAttributeFilename") as Api.DocumentAttributeFilename;
 
             if (filenameAttr && filenameAttr.fileName) {
+                rawFileName = filenameAttr.fileName;
                 filename += `_${filenameAttr.fileName}`;
                 noExt = true;
             }
         }
 
-        const fullFileName = noExt ? filename : `${filename}.${ext || 'mp4'}`;
+        fullFileName = noExt ? filename : `${filename}.${ext || 'mp4'}`;
 
         channelInfo.fileName = fullFileName;
 
@@ -432,7 +472,9 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             },
         });
 
-        await writeFile(`${dir}/${fullFileName}`, buffer);
+        absSavePath = `${dir}/${fullFileName}`;
+
+        await writeFile(absSavePath, buffer);
     }
 
     if (audio && (!medias || medias.includes('audio'))) {
@@ -474,12 +516,13 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             const filenameAttr = document.attributes.find(v => v.className == "DocumentAttributeFilename") as Api.DocumentAttributeFilename;
 
             if (filenameAttr && filenameAttr.fileName) {
+                rawFileName = filenameAttr.fileName;
                 filename += `_${filenameAttr.fileName}`;
                 noExt = true;
             }
         }
 
-        const fullFileName = noExt ? filename : `${filename}.${ext || 'mp3'}`;
+        fullFileName = noExt ? filename : `${filename}.${ext || 'mp3'}`;
 
         channelInfo.fileName = fullFileName;
 
@@ -490,7 +533,9 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             },
         });
 
-        await writeFile(`${dir}/${fullFileName}`, buffer);
+        absSavePath = `${dir}/${fullFileName}`;
+
+        await writeFile(absSavePath, buffer);
     }
 
     if (file && (!medias || medias.includes('file'))) {
@@ -532,12 +577,13 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             const filenameAttr = document.attributes.find(v => v.className == "DocumentAttributeFilename") as Api.DocumentAttributeFilename;
 
             if (filenameAttr && filenameAttr.fileName) {
+                rawFileName = filenameAttr.fileName;
                 filename += `_${filenameAttr.fileName}`;
                 noExt = true;
             }
         }
 
-        const fullFileName = noExt ? filename : `${filename}.${ext || 'dat'}`;
+        fullFileName = noExt ? filename : `${filename}.${ext || 'dat'}`;
 
         channelInfo.fileName = fullFileName;
 
@@ -548,7 +594,15 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
             },
         });
 
-        await writeFile(`${dir}/${fullFileName}`, buffer);
+        absSavePath = `${dir}/${fullFileName}`;
+
+        await writeFile(absSavePath, buffer);
+    }
+
+    if (saveRawMessage && (rawFileName || absSavePath)) {
+        const savePath = absSavePath.replace(DataDir() + '/', '');
+
+        updateSatement.run(rawFileName, savePath, msg_uid);
     }
 }
 
@@ -567,6 +621,8 @@ let tonfig: Tonfig;
 let uiTimer: Cron;
 let mainTimer: Cron;
 let mediaSpiderTimer: Cron;
+
+let database: Db;
 
 let channelInfos: Awaited<ReturnType<typeof getChannelInfos>>;
 
@@ -667,25 +723,6 @@ async function render() {
         if (channelTable && channelTable.length) {
             console.log(consoletable(channelTable));
 
-            {
-                const maxIdLength = Math.max(...channelTable.map(v => v.ID.length));
-
-                const logFile = DataDir() + '/channels_list.log';
-
-                const logContent = channelTable.map(v => {
-                    const id = v.ID.padStart(maxIdLength, ' ');
-                    const title = v.频道名;
-
-                    return `${id}    ${title}`;
-                }).join("\n");
-
-                writeFileSync(logFile, logContent, {
-                    encoding: 'utf-8',
-                });
-
-                console.log(`频道列表已保存：${logFile}`);
-            }
-
             uiTimer.stop();
             return;
         }
@@ -767,6 +804,7 @@ async function main() {
                 _: "photo,video,audio,file",
             },
             groupMessage: false,
+            saveRawMessage: false,
         },
 
         filter: {
@@ -803,6 +841,12 @@ async function main() {
     });
 
     await tonfig.save();
+
+    const saveRawMessage = tonfig.get<boolean>("spider.saveRawMessage", false);
+
+    if (saveRawMessage) {
+        database = Db.db();
+    }
 
     const apiId = tonfig.get<number>("account.apiId");
     const apiHash = tonfig.get<string>("account.apiHash");
@@ -850,16 +894,53 @@ async function main() {
 
     channelInfos = await getChannelInfos(client);
 
-    if (listChannels) {
-        channelTable = [];
+    channelTable = channelInfos.map(channel => {
+        return {
+            "ID": channel.id.toString(),
+            "频道名": channel.title,
+        };
+    });
 
-        for (const channel of channelInfos) {
-            channelTable.push({
-                "ID": channel.id.toString(),
-                "频道名": channel.title,
-            });
+    {
+        const maxIdLength = Math.max(...channelTable.map(v => v.ID.length));
+
+        const logFile = DataDir() + '/channels.txt';
+
+        const logContent = channelTable.map(v => {
+            const id = v.ID.padStart(maxIdLength, ' ');
+            const title = v.频道名;
+
+            return `${id}    ${title}`;
+        }).join("\n");
+
+        writeFileSync(logFile, logContent, {
+            encoding: 'utf-8',
+        });
+    }
+
+    if (saveRawMessage) {
+        database.emptyTable('channel');
+
+        const satement = database.prepare<string[]>("INSERT INTO channel (id, pid, title) VALUES (?, ?, ?)");
+
+        for (const channelInfo of channelInfos) {
+            const id = channelInfo.id.toString();
+            const title = channelInfo.title || '';
+
+            satement.run(id, '', title);
+
+            for (const topic of channelInfo.topics) {
+                const tid = topic.id.toString();
+                const title = topic.title || '';
+
+                satement.run(tid, id, title);
+            }
         }
+    }
 
+    if (listChannels) {
+        // 等待render输出channelTable
+        // 后面代码不再执行
         await waitForever();
     }
 
@@ -884,7 +965,7 @@ async function main() {
         const message = channelInfo.messages[0];
         const mediasArr = channelInfo.medias;
 
-        await downloadChannelMedia(client, channelId, message, channelInfo, mediasArr, groupMessage).then(async () => {
+        await downloadChannelMedia(client, channelId, message, channelInfo, mediasArr, groupMessage, saveRawMessage).then(async () => {
             channelInfo.messages.shift();
 
             // 下载成功，保存当前频道位置
