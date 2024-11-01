@@ -3,15 +3,15 @@ Telegram 频道爬虫
 
 ![屏幕截图](screenshot.jpg)
 
-# 初始化
+# 初始化（开发）
 ```bash
 yarn
 ```
 
-# 如何调试
+# 如何调试（开发）
 `VS Code` 中直接F5运行 `Launch`。
 
-# 如何打包
+# 如何打包（开发）
 `VS Code` 中运行 `pack executable` 任务，可执行文件会生成到 `output` 目录下。
 
 <br />
@@ -134,6 +134,11 @@ file = "0-10737418240"
 ```
 
 ## 代理设置
+
+如果你所在的地区无法直连TG服务器，可使用代理进行连接
+
+不支持 secret 以 `ee` 开头的 MTProxy，相关issue：[gram-js/gramjs#426](https://github.com/gram-js/gramjs/issues/426)
+
 参考：
 <br />
 [Using MTProxies and Socks5 Proxies](https://gram.js.org/getting-started/authorization#using-mtproxies-and-socks5-proxies)
@@ -156,3 +161,34 @@ groupMessage = true
 
 当开启消息聚合后，这些文件会放在子文件夹中。
 即保存在 `data/{频道id}[/_{子组id}][/{聚合id}]` 文件夹下，文件名格式：`{消息id}[_{原文件名}]`。
+
+## 原始数据保存
+```toml
+[spider]
+saveRawMessage = true
+```
+
+当开启原始数据保存后，所有的频道列表、频道消息都会保存在 `data/database.db` sqlite3数据库中，以方便有二开或对接的需求。
+
+### `channel` 表
+| 字段  | 类型    | 说明               |
+| ---   | ---    | ---                |
+| id    | string | 频道id/子组id       |
+| pid   | string | 父频道id（子组才有） |
+| title | string | 频道名              |
+
+
+### `message` 表
+| 字段       | 类型    | 说明                                   |
+| ---        | ---    | ---                                    |
+| id         | number | 自增id                                 |
+| uniqueId   | string | 内部使用                               |
+| channelId  | string | 频道id                                 |
+| topicId    | string | 子组id                                 |
+| messageId  | string | 消息id                                 |
+| groupedId  | string | 聚合id                                 |
+| text       | string | 消息文本内容                            |
+| rawMessage | string | 消息原始内容（JSON）                     |
+| fileName   | string | 原文件名（一般只有文件才有，图片等不会有） |
+| savePath   | string | 文件保存位置（相对于 `data` 文件夹）      |
+| date       | number | 消息发送时间戳                           |
