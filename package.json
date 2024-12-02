@@ -7,8 +7,8 @@
   "pkg": {
     "private": true,
     "assets": [
-      "**/*.sql",
-      "./node_modules/**/*.node"
+      "./obfuscated/**/*.sql",
+      "./obfuscated/**/*.node"
     ],
     "targets": [
       "node18-win",
@@ -21,7 +21,7 @@
   "dependencies": {
     "@liesauer/tonfig": "^1.0.5",
     "async": "^3.2.5",
-    "better-sqlite3": "^11.5.0",
+    "better-sqlite3": "^11.6.0",
     "croner": "^8.0.2",
     "input": "^1.0.1",
     "mimetics": "^0.0.8",

@@ -12,12 +12,28 @@ export class Db {
     public static db() {
         if (!this.instance) {
             this.instance = new Db();
-            this.instance._db = new DatabaseConstructor(DataDir() + '/database.db');
+            this.instance._db = new DatabaseConstructor(DataDir() + '/database.db', {
+                nativeBinding: this.getNativeBinding(),
+            });
 
             this.instance.initTable();
         }
 
         return this.instance;
+    }
+
+    private static getNativeBinding() {
+        const better_sqlite3_version = '11.6.0';
+        const nodejs_runtime_version = '108';
+
+        // https://nodejs.cn/api/process.html#processplatform
+        const platform = process.platform;
+        // https://nodejs.cn/api/process.html#processarch
+        const arch = process.arch;
+
+        const path = __dirname + `/better-sqlite3/better-sqlite3-v${better_sqlite3_version}-node-v${nodejs_runtime_version}-${platform}-${arch}/build/Release/better_sqlite3.node`;
+
+        return path;
     }
 
     private initTable() {

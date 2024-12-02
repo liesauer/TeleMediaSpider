@@ -112,6 +112,45 @@
         },
         {
             "type": "shell",
+            "label": "copy-sql",
+            "command": "npx",
+            "args": [
+                "copyfiles",
+                "-u",
+                "1",
+                "src/**/*.sql",
+                "dist"
+            ],
+            "hide": true,
+            "problemMatcher": []
+        },
+        {
+            "type": "shell",
+            "label": "copy-node",
+            "command": "npx",
+            "args": [
+                "copyfiles",
+                "-u",
+                "1",
+                "src/**/*.node",
+                "dist"
+            ],
+            "hide": true,
+            "problemMatcher": []
+        },
+        {
+            "type": "shell",
+            "label": "copy-files",
+            "dependsOn":[
+                "copy-sql",
+                "copy-node"
+            ],
+            "dependsOrder": "sequence",
+            "hide": true,
+            "problemMatcher": []
+        },
+        {
+            "type": "shell",
             "label": "pre-obfuscate",
             "command": "npx",
             "args": [
@@ -146,6 +185,7 @@
             },
             "args": [
                 "pkg",
+                "--no-native-build",
                 "--no-bytecode",
                 "--public-packages",
                 "\"*\"",
@@ -158,6 +198,7 @@
             ],
             "dependsOn":[
                 "build",
+                "copy-files",
                 "obfuscate"
             ],
             "dependsOrder": "sequence",
