@@ -76,6 +76,32 @@ function workerErrorHandler(error: any, job: Cron) {
     logger.error(`「${job.name}」任务过程中发生错误：\n${error}`);
 };
 
+async function GetChannels<T = Api.PeerChannel>(ids: T[]) {
+    if (!ids.length) return [];
+
+    const _get = <T = any>(ids: T[]) => {
+        if (!ids.length) return [];
+
+        return client.invoke(new Api.channels.GetChannels({
+            id: ids as Api.PeerChannel[],
+        })).then(result => {
+            return result.chats;
+        }, error => {
+            return null;
+            // 就一个都报错，就没有二分下去的必要了
+            if (ids.length < 2) return null;
+
+            // return GetChannels(ids);
+        });
+    };
+
+    const mid   = Math.ceil(ids.length / 2);
+    const part1 = ids.slice(0, mid);
+    const part2 = ids.slice(mid);
+
+    return [...await _get<T>(part1), ...await _get<T>(part2)];
+}
+
 async function getChannelInfos(client: TelegramClient) {
     let dialogs: Dialog[] = [];
 
@@ -89,11 +115,9 @@ async function getChannelInfos(client: TelegramClient) {
         return { key: e.channelId.toString(), value: e };
     });
 
-    const channels = await client.invoke(new Api.channels.GetChannels({
-        id: ids,
-    }));
+    const channels = await GetChannels(ids);
 
-    const chats = channels.chats.filter(v => v.className == "Channel").map(v => v as Api.Channel);
+    const chats = channels.filter(v => v.className == "Channel").map(v => v as Api.Channel);
 
     const getTopics = (topics: Api.messages.ForumTopics) => {
         return topics.topics.filter(v => v.className == "ForumTopic").map(v => v as Api.ForumTopic).map(v => ({
