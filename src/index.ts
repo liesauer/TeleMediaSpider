@@ -76,22 +76,23 @@ function workerErrorHandler(error: any, job: Cron) {
     logger.error(`「${job.name}」任务过程中发生错误：\n${error}`);
 };
 
-async function GetChannels<T = Api.PeerChannel>(ids: T[]) {
+async function GetChannels<T = Api.PeerChannel>(ids: T[]): Promise<Api.TypeChat[]> {
     if (!ids.length) return [];
 
-    const _get = <T = any>(ids: T[]) => {
+    // return client.invoke(new Api.channels.GetChannels({
+    //     id: ids as Api.PeerChannel[],
+    // })).then(v => v.chats);
+
+    const _get = async <T = any>(ids: T[]) => {
         if (!ids.length) return [];
 
         return client.invoke(new Api.channels.GetChannels({
             id: ids as Api.PeerChannel[],
-        })).then(result => {
-            return result.chats;
-        }, error => {
-            return null;
+        })).then<Api.TypeChat[], Api.TypeChat[]>(v => v.chats, _ => {
             // 就一个都报错，就没有二分下去的必要了
-            if (ids.length < 2) return null;
+            if (ids.length < 2) return [];
 
-            // return GetChannels(ids);
+            return GetChannels(ids);
         });
     };
 
