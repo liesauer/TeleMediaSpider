@@ -178,11 +178,6 @@
             "type": "shell",
             "label": "pack executable",
             "command": "npx",
-            "options": {
-                "env": {
-                    "PKG_CACHE_PATH": "${workspaceFolder}/.pkg-cache",
-                }
-            },
             "args": [
                 "pkg",
                 "--no-native-build",
