@@ -345,9 +345,14 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
     const className = message.className as string;
     const messageId = message.id ? message.id.toString() : '';
     const groupedId = message.groupedId ? message.groupedId.toString() : '';
-    const _topicId  = message.replyTo?.replyToTopId || message.replyTo?.replyToMsgId || message.replyToMsgId;
-    const topicId   = _topicId ? _topicId.toString() : '';
+    const _replyId  = message.replyTo?.replyToTopId || message.replyTo?.replyToMsgId || message.replyToMsgId;
+    let topicId     = (message.replyTo?.forumTopic && _replyId) ? _replyId.toString() : '';
     channelId       = channelId || '';
+
+    if (channelInfo.topics?.length && !topicId) {
+        topicId = '1';
+    }
+
     const msg_uid   = md5(`${channelId}_${topicId}_${messageId}_${groupedId}`);
 
     if (className != "Message") return;
@@ -656,6 +661,10 @@ let channelInfos: Awaited<ReturnType<typeof getChannelInfos>>;
 const waitQueue: AnnotatedDictionary<{
     channelId: string,
     channelTitle: string,
+    topics: {
+        id: number,
+        title: string,
+    }[],
     downloading: boolean,
     fileName: string,
     downloadedBytes: bigInt.BigInteger,
@@ -692,6 +701,7 @@ async function mediaSpider() {
             waitQueue[channelId] = {
                 channelId: channelId,
                 channelTitle: channelTitle,
+                topics: channel.topics || [],
                 downloading: false,
                 fileName: '',
                 downloadedBytes: null,
@@ -753,6 +763,7 @@ async function render() {
             downloading.push({
                 channelId: '',
                 channelTitle: '',
+                topics: [],
                 downloading: true,
                 fileName: '',
                 downloadedBytes: null,
