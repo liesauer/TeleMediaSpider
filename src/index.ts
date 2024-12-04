@@ -349,7 +349,7 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
     let topicId     = (message.replyTo?.forumTopic && _replyId) ? _replyId.toString() : '';
     channelId       = channelId || '';
 
-    if (channelInfo.topics?.length && !topicId) {
+    if (channelInfo.forum && !topicId) {
         topicId = '1';
     }
 
@@ -661,6 +661,7 @@ let channelInfos: Awaited<ReturnType<typeof getChannelInfos>>;
 const waitQueue: AnnotatedDictionary<{
     channelId: string,
     channelTitle: string,
+    forum: boolean,
     topics: {
         id: number,
         title: string,
@@ -701,6 +702,7 @@ async function mediaSpider() {
             waitQueue[channelId] = {
                 channelId: channelId,
                 channelTitle: channelTitle,
+                forum: channel.forum,
                 topics: channel.topics || [],
                 downloading: false,
                 fileName: '',
@@ -763,6 +765,7 @@ async function render() {
             downloading.push({
                 channelId: '',
                 channelTitle: '',
+                forum: false,
                 topics: [],
                 downloading: true,
                 fileName: '',
