@@ -343,19 +343,34 @@ async function downloadChannelMedia(client: TelegramClient, channelId: string, m
      * MessageService：修改频道头像、信息等等
      */
     const className = message.className as string;
-    const messageId = message.id ? message.id.toString() : '';
-    const groupedId = message.groupedId ? message.groupedId.toString() : '';
-    const _replyId  = message.replyTo?.replyToTopId || message.replyTo?.replyToMsgId || message.replyToMsgId;
-    let topicId     = (message.replyTo?.forumTopic && _replyId) ? _replyId.toString() : '';
-    channelId       = channelId || '';
+    
+    if (className != "Message") return;
+
+    const messageId      = message.id ? message.id.toString() : '';
+    const groupedId      = message.groupedId ? message.groupedId.toString() : '';
+    const _replyId       = message.replyTo?.replyToTopId || message.replyTo?.replyToMsgId || message.replyToMsgId;
+    let topicId          = (message.replyTo?.forumTopic && _replyId) ? _replyId.toString() : '';
+    channelId            = channelId || '';
+    let commentChannelId = '';
 
     if (channelInfo.forum && !topicId) {
         topicId = '1';
     }
 
-    const msg_uid   = md5(`${channelId}_${topicId}_${messageId}_${groupedId}`);
+    /**
+     * 消息评论是需要在一个专门的频道承载的
+     */
+    if (message['comment']) {
+        commentChannelId = (<Api.PeerChannel>message.peerId).channelId.toString();
+    }
 
-    if (className != "Message") return;
+    let msg_uid = '';
+
+    if (commentChannelId) {
+        msg_uid = md5(`${channelId}_${topicId}_${commentChannelId}_${messageId}_${groupedId}`);
+    } else {
+        msg_uid = md5(`${channelId}_${topicId}_${messageId}_${groupedId}`);
+    }
 
     let querySatement: Statement;
     let insertSatement: Statement;
@@ -740,6 +755,28 @@ async function mediaSpider() {
             waitQueue[channelId].messages.push(message);
 
             execQueue.push();
+
+            // 消息评论
+            if (message.replies?.replies && message.replies?.channelId) {
+                const result = await client.invoke(
+                    new Api.messages.GetReplies({
+                    peer: message.peerId,
+                    msgId: message.id,
+                    })
+                ).catch(_ => null) as Api.messages.ChannelMessages;
+
+                if (result && result.messages?.length) {
+                    const comments = result.messages.reverse();
+
+                    for (const comment of comments) {
+                        waitQueue[channelId].messages.push(comment as Api.MessageService);
+
+                        comment['comment'] = true;
+
+                        execQueue.push();
+                    }
+                }
+            }
         }
     }
 }
@@ -1077,12 +1114,25 @@ async function main() {
         const message = channelInfo.messages[0];
         const mediasArr = channelInfo.medias;
 
+        // channelInfo.messages.shift();
+
+        // // 下载成功，保存当前频道位置
+        // tonfig.set(['spider', 'lastIds', channelId], message.id);
+        // await tonfig.save();
+
+        // channelInfo.downloading = false;
+        // channelInfo.lastDownloadTime = Date.now();
+
+        // callback();
+
         await downloadChannelMedia(client, channelId, message, channelInfo, mediasArr, groupMessage, saveRawMessage).then(async () => {
             channelInfo.messages.shift();
 
-            // 下载成功，保存当前频道位置
-            tonfig.set(['spider', 'lastIds', channelId], message.id);
-            await tonfig.save();
+            if (!message['comment']) {
+                // 下载成功，保存当前频道位置
+                tonfig.set(['spider', 'lastIds', channelId], message.id);
+                await tonfig.save();
+            }
         }, () => {
             // 下载失败，啥也不用管，后面根据队列自动重试
         }).finally(() => {
