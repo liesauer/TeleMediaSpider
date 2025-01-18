@@ -23,6 +23,8 @@ import { AnnotatedDictionary, UnwrapAnnotatedDictionary } from './types';
 
 const argv = minimist(process.argv.slice(2));
 
+const logFile = DataDir() + '/channels.txt';
+
 class MyLogger extends Logger {
     public format(message: string, level: string, messageFormat?: string) {
         return (messageFormat || this.messageFormat)
@@ -788,6 +790,8 @@ async function render() {
         if (channelTable && channelTable.length) {
             console.log(consoletable(channelTable));
 
+            console.log(`完整列表已保存至：${logFile}`);
+
             uiTimer.stop();
             return;
         }
@@ -1033,6 +1037,8 @@ async function main() {
         }
     }
 
+    logger.info('获取频道信息中...');
+
     channelInfos = await getChannelInfos(client);
 
     channelTable = channelInfos.map(channel => {
@@ -1044,8 +1050,6 @@ async function main() {
 
     {
         const maxIdLength = Math.max(...channelTable.map(v => v.ID.length));
-
-        const logFile = DataDir() + '/channels.txt';
 
         const logContent = channelTable.map(v => {
             const id = v.ID.padStart(maxIdLength, ' ');
@@ -1060,6 +1064,8 @@ async function main() {
     }
 
     if (saveRawMessage) {
+        logger.info('保存频道信息到数据库中...');
+
         database.emptyTable('channel');
 
         const satement = database.prepare<string[]>("INSERT INTO channel (id, pid, title) VALUES (?, ?, ?)");
