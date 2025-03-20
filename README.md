@@ -35,6 +35,18 @@ yarn
 <br />
 ~~`account.session`~~（这个不需要填，登录后自动保存）
 
+无法申请 API （一直提示 ERROR 等）可以尝试这个教程，[另一种不需要 API ID 和 API HASH 的登录方式](https://github.com/liesauer/TGLogin/discussions/1)。
+
+~~`account.deviceModel`~~（正常不需要填，使用无 API 方案建议填写）
+<br />
+~~`account.systemVersion`~~（正常不需要填，使用无 API 方案建议填写）
+<br />
+~~`account.appVersion`~~（正常不需要填，使用无 API 方案建议填写）
+<br />
+~~`account.langCode`~~（正常不需要填，使用无 API 方案建议填写）
+<br />
+~~`account.systemLangCode`~~（正常不需要填，使用无 API 方案建议填写）
+
 配置保存后，根据提示进行登录（仅第一次需要）
 
 ## 2. 配置频道列表
