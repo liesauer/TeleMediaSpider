@@ -1,6 +1,6 @@
 {
   "name": "telegram-media-spider",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "private": true,
   "bin": "./obfuscated/index.js",
   "packageManager": "yarn@4.5.0",
