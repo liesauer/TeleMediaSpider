@@ -110,6 +110,13 @@ async function GetChannels<T = Api.PeerChannel>(ids: T[]): Promise<Api.TypeChat[
 async function getChannelInfos(client: TelegramClient) {
     let dialogs: Dialog[] = [];
 
+    /**
+     * https://github.com/gram-js/gramjs/issues/785
+     * 
+     * node_modules/telegram/client/dialogs.js#L129
+     * 
+     * if (!message) continue;
+     */
     for await (const dialog of client.iterDialogs()) {
         dialogs.push(dialog);
     }
