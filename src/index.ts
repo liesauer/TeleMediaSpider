@@ -771,6 +771,7 @@ async function mediaSpider() {
                     new Api.messages.GetReplies({
                     peer: message.peerId,
                     msgId: message.id,
+                    limit: 2057604,
                     })
                 ).catch(_ => null) as Api.messages.ChannelMessages;
 
